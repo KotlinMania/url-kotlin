@@ -45,7 +45,7 @@ Please see [UPGRADING.md](https://github.com/servo/rust-url/blob/main/UPGRADING.
 
 ```kotlin
 dependencies {
-    implementation("io.github.kotlinmania:url-kotlin:0.1.0-SNAPSHOT")
+    implementation("io.github.kotlinmania:url-kotlin:0.1.0")
 }
 ```
 
