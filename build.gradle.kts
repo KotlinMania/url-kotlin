@@ -199,10 +199,18 @@ kotlin {
         binaries.framework { baseName = "Url"; xcf.add(this) }
     }
     iosSimulatorArm64 {
-        binaries.framework { baseName = "Url"; xcf.add(this) }
+        binaries.framework {
+            baseName = "Url"
+            isStatic = true
+            xcf.add(this)
+        }
     }
     iosX64 {
-        binaries.framework { baseName = "Url"; xcf.add(this) }
+        binaries.framework {
+            baseName = "Url"
+            isStatic = true
+            xcf.add(this)
+        }
     }
 
     tvosArm64 {
