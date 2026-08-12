@@ -1,8 +1,6 @@
 // port-lint: source parser.rs
 package io.github.kotlinmania.url
 
-import kotlin.math.min
-
 internal class BasicUrlParser(
     private val input: String,
     private val baseUrl: Url?,
@@ -83,25 +81,29 @@ internal class BasicUrlParser(
 
         // Authority ends at the first of /, ?, #, or end of string
         // indexOf returns -1 for not found — filter those out
-        val authorityEndIdx = when {
-            firstSlash >= 0 && firstQuery >= 0 && firstHash >= 0 -> minOf(firstSlash, firstQuery, firstHash)
-            firstSlash >= 0 && firstQuery >= 0 -> minOf(firstSlash, firstQuery)
-            firstSlash >= 0 && firstHash >= 0 -> minOf(firstSlash, firstHash)
-            firstQuery >= 0 && firstHash >= 0 -> minOf(firstQuery, firstHash)
-            firstSlash >= 0 -> firstSlash
-            firstQuery >= 0 -> firstQuery
-            firstHash >= 0 -> firstHash
-            else -> authorityAndPath.length
-        }
+        val authorityEndIdx =
+            when {
+                firstSlash >= 0 && firstQuery >= 0 && firstHash >= 0 -> minOf(firstSlash, firstQuery, firstHash)
+                firstSlash >= 0 && firstQuery >= 0 -> minOf(firstSlash, firstQuery)
+                firstSlash >= 0 && firstHash >= 0 -> minOf(firstSlash, firstHash)
+                firstQuery >= 0 && firstHash >= 0 -> minOf(firstQuery, firstHash)
+                firstSlash >= 0 -> firstSlash
+                firstQuery >= 0 -> firstQuery
+                firstHash >= 0 -> firstHash
+                else -> authorityAndPath.length
+            }
 
         val authority = authorityAndPath.substring(0, authorityEndIdx)
         val restAfterAuthority = authorityAndPath.substring(authorityEndIdx)
 
         // Parse userinfo (username:password@)
         val atIdx = authority.indexOf('@')
-        val userInfo: String? = if (atIdx >= 0) {
-            authority.substring(0, atIdx)
-        } else null
+        val userInfo: String? =
+            if (atIdx >= 0) {
+                authority.substring(0, atIdx)
+            } else {
+                null
+            }
 
         var hostPart = if (atIdx >= 0) authority.substring(atIdx + 1) else authority
 
@@ -190,21 +192,35 @@ internal class BasicUrlParser(
 
         // Parse path, query, fragment from restAfterAuthority
         val hashIdx = restAfterAuthority.indexOf('#')
-        val qIdx = if (hashIdx >= 0) restAfterAuthority.substring(0, hashIdx).indexOf('?')
-        else restAfterAuthority.indexOf('?')
+        val qIdx =
+            if (hashIdx >= 0) {
+                restAfterAuthority.substring(0, hashIdx).indexOf('?')
+            } else {
+                restAfterAuthority.indexOf('?')
+            }
 
-        val pathStr: String = when {
-            qIdx >= 0 -> restAfterAuthority.substring(0, qIdx)
-            hashIdx >= 0 -> restAfterAuthority.substring(0, hashIdx)
-            else -> restAfterAuthority
-        }
-        val queryStr: String? = if (qIdx >= 0) {
-            if (hashIdx >= 0) restAfterAuthority.substring(qIdx + 1, hashIdx)
-            else restAfterAuthority.substring(qIdx + 1)
-        } else null
-        val fragmentStr: String? = if (hashIdx >= 0) {
-            restAfterAuthority.substring(hashIdx + 1)
-        } else null
+        val pathStr: String =
+            when {
+                qIdx >= 0 -> restAfterAuthority.substring(0, qIdx)
+                hashIdx >= 0 -> restAfterAuthority.substring(0, hashIdx)
+                else -> restAfterAuthority
+            }
+        val queryStr: String? =
+            if (qIdx >= 0) {
+                if (hashIdx >= 0) {
+                    restAfterAuthority.substring(qIdx + 1, hashIdx)
+                } else {
+                    restAfterAuthority.substring(qIdx + 1)
+                }
+            } else {
+                null
+            }
+        val fragmentStr: String? =
+            if (hashIdx >= 0) {
+                restAfterAuthority.substring(hashIdx + 1)
+            } else {
+                null
+            }
 
         val isSpecialScheme = scheme in specialSchemes
 
@@ -228,28 +244,32 @@ internal class BasicUrlParser(
             serialization.append('#').append(fragmentStr)
         }
 
-        return Result.success(Url(
-            serialization = serialization.toString(),
-            schemeEnd = schemeEnd,
-            usernameEnd = usernameEnd,
-            hostStart = hostStart,
-            hostEnd = hostEnd,
-            host = host,
-            port = port,
-            pathStart = pathStart,
-            queryStart = queryStart,
-            fragmentStart = fragmentStart,
-        ))
+        return Result.success(
+            Url(
+                serialization = serialization.toString(),
+                schemeEnd = schemeEnd,
+                usernameEnd = usernameEnd,
+                hostStart = hostStart,
+                hostEnd = hostEnd,
+                host = host,
+                port = port,
+                pathStart = pathStart,
+                queryStart = queryStart,
+                fragmentStart = fragmentStart,
+            ),
+        )
     }
 
     internal fun looksLikeIpv4ButInvalid(s: String): Boolean {
         val parts = s.split('.')
         if (parts.size < 2) return false
         return parts.all { part ->
-            part.isNotEmpty() && (
-                part.all { it.isDigit() } ||
-                part.startsWith("0x") || part.startsWith("0X")
-            )
+            part.isNotEmpty() &&
+                (
+                    part.all { it.isDigit() } ||
+                        part.startsWith("0x") ||
+                        part.startsWith("0X")
+                )
         }
     }
 
@@ -269,7 +289,9 @@ internal class BasicUrlParser(
                 ".." -> {
                     if (result.size > 1 && (result.last().length != 2 || result.last()[1] != ':')) {
                         result.removeLast()
-                    } else if (result.isEmpty()) result.add("")
+                    } else if (result.isEmpty()) {
+                        result.add("")
+                    }
                     addTrailingSlash = true
                 }
                 else -> {
@@ -282,7 +304,13 @@ internal class BasicUrlParser(
             result.add("")
         }
         val joined = result.joinToString("/")
-        return if (joined.isEmpty()) "/" else if (joined.startsWith("/")) joined else "/$joined"
+        return if (joined.isEmpty()) {
+            "/"
+        } else if (joined.startsWith("/")) {
+            joined
+        } else {
+            "/$joined"
+        }
     }
 
     private fun parseWithoutAuthority(scheme: String, rest: String): Result<Url> {
@@ -290,18 +318,29 @@ internal class BasicUrlParser(
         val schemeEnd = scheme.length
 
         val hashIdx = rest.indexOf('#')
-        val qIdx = if (hashIdx >= 0) rest.substring(0, hashIdx).indexOf('?')
-        else rest.indexOf('?')
+        val qIdx =
+            if (hashIdx >= 0) {
+                rest.substring(0, hashIdx).indexOf('?')
+            } else {
+                rest.indexOf('?')
+            }
 
-        val pathStr: String = when {
-            qIdx >= 0 -> rest.substring(0, qIdx)
-            hashIdx >= 0 -> rest.substring(0, hashIdx)
-            else -> rest
-        }
-        val queryStr: String? = if (qIdx >= 0) {
-            if (hashIdx >= 0) rest.substring(qIdx + 1, hashIdx)
-            else rest.substring(qIdx + 1)
-        } else null
+        val pathStr: String =
+            when {
+                qIdx >= 0 -> rest.substring(0, qIdx)
+                hashIdx >= 0 -> rest.substring(0, hashIdx)
+                else -> rest
+            }
+        val queryStr: String? =
+            if (qIdx >= 0) {
+                if (hashIdx >= 0) {
+                    rest.substring(qIdx + 1, hashIdx)
+                } else {
+                    rest.substring(qIdx + 1)
+                }
+            } else {
+                null
+            }
         val fragmentStr: String? = if (hashIdx >= 0) rest.substring(hashIdx + 1) else null
 
         val serialBuf = StringBuilder(serialization)
@@ -310,18 +349,19 @@ internal class BasicUrlParser(
         val baseLen = serialization.length // position of path start (after "scheme:")
         val pathStart = baseLen
 
-        val result = Url(
-            serialization = serialBuf.toString() + (queryStr?.let { "?$it" } ?: "") + (fragmentStr?.let { "#$it" } ?: ""),
-            schemeEnd = schemeEnd,
-            usernameEnd = schemeEnd + 1,
-            hostStart = schemeEnd + 1,
-            hostEnd = schemeEnd + 1,
-            host = HostInternal.None,
-            port = null,
-            pathStart = pathStart,
-            queryStart = if (queryStr != null) serialBuf.length else null,
-            fragmentStart = (serialBuf.length + if (queryStr != null) 1 + queryStr.length else 0).takeIf { fragmentStr != null },
-        )
+        val result =
+            Url(
+                serialization = serialBuf.toString() + (queryStr?.let { "?$it" } ?: "") + (fragmentStr?.let { "#$it" } ?: ""),
+                schemeEnd = schemeEnd,
+                usernameEnd = schemeEnd + 1,
+                hostStart = schemeEnd + 1,
+                hostEnd = schemeEnd + 1,
+                host = HostInternal.None,
+                port = null,
+                pathStart = pathStart,
+                queryStart = if (queryStr != null) serialBuf.length else null,
+                fragmentStart = (serialBuf.length + if (queryStr != null) 1 + queryStr.length else 0).takeIf { fragmentStr != null },
+            )
 
         return Result.success(result)
     }
@@ -393,7 +433,6 @@ internal class BasicUrlParser(
         val lastSlash = basePath.lastIndexOf('/')
         return if (lastSlash >= 0) "${basePath.substring(0, lastSlash + 1)}$input" else "/$input"
     }
-
 }
 
 // Lowercase ASCII letters but uppercase percent-encoded hex digits in a host string

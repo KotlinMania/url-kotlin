@@ -3,15 +3,12 @@ package io.github.kotlinmania.url
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
-import kotlin.test.fail
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class LibTest {
-
     @Test
     fun testRelative() {
         val base = Url.parse("sc://%C3%B1").getOrThrow()
@@ -110,7 +107,10 @@ class LibTest {
 
     @Test
     fun testEquality() {
-        data class CheckEq(val a: Url, val b: Url)
+        data class CheckEq(
+            val a: Url,
+            val b: Url,
+        )
 
         fun url(s: String): Url {
             val rv = Url.parse(s).getOrThrow()
@@ -178,16 +178,17 @@ class LibTest {
 
     @Test
     fun testSerialization() {
-        val data = listOf(
-            "http://example.com/" to "http://example.com/",
-            "http://addslash.com" to "http://addslash.com/",
-            "http://@emptyuser.com/" to "http://emptyuser.com/",
-            "http://:@emptypass.com/" to "http://emptypass.com/",
-            "http://user@user.com/" to "http://user@user.com/",
-            "http://user:pass@userpass.com/" to "http://user:pass@userpass.com/",
-            "http://slashquery.com/path/?q=something" to "http://slashquery.com/path/?q=something",
-            "http://noslashquery.com/path?q=something" to "http://noslashquery.com/path?q=something",
-        )
+        val data =
+            listOf(
+                "http://example.com/" to "http://example.com/",
+                "http://addslash.com" to "http://addslash.com/",
+                "http://@emptyuser.com/" to "http://emptyuser.com/",
+                "http://:@emptypass.com/" to "http://emptypass.com/",
+                "http://user@user.com/" to "http://user@user.com/",
+                "http://user:pass@userpass.com/" to "http://user:pass@userpass.com/",
+                "http://slashquery.com/path/?q=something" to "http://slashquery.com/path/?q=something",
+                "http://noslashquery.com/path?q=something" to "http://noslashquery.com/path?q=something",
+            )
         for ((input, result) in data) {
             val url = Url.parse(input).getOrThrow()
             assertEquals(result, url.asStr())
@@ -386,39 +387,40 @@ class LibTest {
             val fragment: String = "",
         )
 
-        val data = listOf(
-            ExpectedSlices(
-                full = "https://user:pass@domain.com:9742/path/file.ext?key=val&key2=val2#fragment",
-                scheme = "https",
-                username = "user",
-                password = "pass",
-                host = "domain.com",
-                port = "9742",
-                path = "/path/file.ext",
-                query = "key=val&key2=val2",
-                fragment = "fragment",
-            ),
-            ExpectedSlices(
-                full = "https://domain.com:9742/path/file.ext#fragment",
-                scheme = "https",
-                host = "domain.com",
-                port = "9742",
-                path = "/path/file.ext",
-                fragment = "fragment",
-            ),
-            ExpectedSlices(
-                full = "https://domain.com:9742/path/file.ext",
-                scheme = "https",
-                host = "domain.com",
-                port = "9742",
-                path = "/path/file.ext",
-            ),
-            ExpectedSlices(
-                full = "blob:blob-info",
-                scheme = "blob",
-                path = "blob-info",
-            ),
-        )
+        val data =
+            listOf(
+                ExpectedSlices(
+                    full = "https://user:pass@domain.com:9742/path/file.ext?key=val&key2=val2#fragment",
+                    scheme = "https",
+                    username = "user",
+                    password = "pass",
+                    host = "domain.com",
+                    port = "9742",
+                    path = "/path/file.ext",
+                    query = "key=val&key2=val2",
+                    fragment = "fragment",
+                ),
+                ExpectedSlices(
+                    full = "https://domain.com:9742/path/file.ext#fragment",
+                    scheme = "https",
+                    host = "domain.com",
+                    port = "9742",
+                    path = "/path/file.ext",
+                    fragment = "fragment",
+                ),
+                ExpectedSlices(
+                    full = "https://domain.com:9742/path/file.ext",
+                    scheme = "https",
+                    host = "domain.com",
+                    port = "9742",
+                    path = "/path/file.ext",
+                ),
+                ExpectedSlices(
+                    full = "blob:blob-info",
+                    scheme = "blob",
+                    path = "blob-info",
+                ),
+            )
 
         for (expected in data) {
             val url = Url.parse(expected.full).getOrThrow()
@@ -459,14 +461,15 @@ class LibTest {
         assertEquals("file:///p:?../", url.toString())
         assertEquals("/p:", url.path())
 
-        val testCases = listOf(
-            "a" to "file:///p:/a",
-            "" to "file:///p:?../",
-            "?x" to "file:///p:?x",
-            "." to "file:///p:/",
-            ".." to "file:///p:/",
-            "../" to "file:///p:/",
-        )
+        val testCases =
+            listOf(
+                "a" to "file:///p:/a",
+                "" to "file:///p:?../",
+                "?x" to "file:///p:?x",
+                "." to "file:///p:/",
+                ".." to "file:///p:/",
+                "../" to "file:///p:/",
+            )
         for (case in testCases) {
             val url2 = url.join(case.first).getOrThrow()
             assertEquals(case.second, url2.toString())
@@ -512,7 +515,13 @@ class LibTest {
     @Test
     fun testOriginOpaque() {
         assertFalse(Origin.newOpaque().isTuple())
-        assertFalse(Url.parse("blob:malformed//").getOrThrow().origin().isTuple())
+        assertFalse(
+            Url
+                .parse("blob:malformed//")
+                .getOrThrow()
+                .origin()
+                .isTuple(),
+        )
     }
 
     @Test
