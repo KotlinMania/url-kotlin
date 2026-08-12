@@ -6,7 +6,8 @@ internal object Quirks {
         scheme.lowercase() in specialSchemes
 
     fun defaultPort(scheme: String): Int? =
-        io.github.kotlinmania.url.defaultPort(scheme)
+        io.github.kotlinmania.url
+            .defaultPort(scheme)
 }
 
 internal fun setHref(url: Url, input: String): Result<Unit> {
@@ -77,31 +78,40 @@ fun setHost(url: Url, newHost: String): Result<Unit> {
         if (url.isSpecial() && url.scheme() != "file") return Result.failure(UrlError.EmptyHost)
         return url.setHost(newHost)
     }
-    val hostOnly = if (!newHost.startsWith("[") || !newHost.endsWith("]")) {
-        val colonIdx = newHost.indexOf(':')
-        when {
-            colonIdx == 0 -> return Result.failure(UrlError.InvalidDomainCharacter)
-            colonIdx > 0 -> newHost.substring(0, colonIdx)
-            else -> newHost
+    val hostOnly =
+        if (!newHost.startsWith("[") || !newHost.endsWith("]")) {
+            val colonIdx = newHost.indexOf(':')
+            when {
+                colonIdx == 0 -> return Result.failure(UrlError.InvalidDomainCharacter)
+                colonIdx > 0 -> newHost.substring(0, colonIdx)
+                else -> newHost
+            }
+        } else {
+            newHost
         }
-    } else newHost
 
     val parsedHost = Host.parse(hostOnly)
     if (parsedHost.isFailure) return Result.failure(UrlError.InvalidDomainCharacter)
 
-    val optPort: Int? = if (!newHost.startsWith("[") || !newHost.endsWith("]")) {
-        val colonIdx = newHost.indexOf(':')
-        if (colonIdx > 0) {
-            val portStr = newHost.substring(colonIdx + 1)
-            if (portStr.isEmpty()) null else portStr.toIntOrNull()
-        } else null
-    } else null
+    val optPort: Int? =
+        if (!newHost.startsWith("[") || !newHost.endsWith("]")) {
+            val colonIdx = newHost.indexOf(':')
+            if (colonIdx > 0) {
+                val portStr = newHost.substring(colonIdx + 1)
+                if (portStr.isEmpty()) null else portStr.toIntOrNull()
+            } else {
+                null
+            }
+        } else {
+            null
+        }
 
     val hostValue = parsedHost.getOrThrow()
-    val domainStr = when (hostValue) {
-        is Host.Domain<*> -> hostValue.domain as? String
-        else -> null
-    }
+    val domainStr =
+        when (hostValue) {
+            is Host.Domain<*> -> hostValue.domain as? String
+            else -> null
+        }
     if (domainStr == "") {
         val hasCreds = url.username().isNotEmpty() || (url.password()?.isNotEmpty() == true)
         if (hasCreds || optPort != null || url.port != null) return Result.failure(UrlError.EmptyHost)
@@ -124,10 +134,11 @@ fun setHostname(url: Url, newHostname: String): Result<Unit> {
     if (parsedHost.isFailure) return Result.failure(UrlError.InvalidDomainCharacter)
 
     val host = parsedHost.getOrThrow()
-    val domainStr = when (host) {
-        is Host.Domain<*> -> host.domain as? String
-        else -> null
-    }
+    val domainStr =
+        when (host) {
+            is Host.Domain<*> -> host.domain as? String
+            else -> null
+        }
     if (domainStr == "") {
         val schemeType = url.scheme()
         if (schemeType in specialSchemes && schemeType != "file") {
@@ -172,21 +183,25 @@ fun setPathname(url: Url, newPathname: String) {
 fun search(url: Url): String = trim(url.slice(Position.AfterPath, Position.AfterQuery))
 
 fun setSearch(url: Url, newSearch: String) {
-    url.setQuery(when {
-        newSearch.isEmpty() -> null
-        newSearch.startsWith("?") -> newSearch.substring(1)
-        else -> newSearch
-    })
+    url.setQuery(
+        when {
+            newSearch.isEmpty() -> null
+            newSearch.startsWith("?") -> newSearch.substring(1)
+            else -> newSearch
+        },
+    )
 }
 
 fun hash(url: Url): String = trim(url.slice(Position.AfterQuery, Position.AfterFragment))
 
 fun setHash(url: Url, newHash: String) {
-    url.setFragment(when {
-        newHash.isEmpty() -> null
-        newHash.startsWith("#") -> newHash.substring(1)
-        else -> newHash
-    })
+    url.setFragment(
+        when {
+            newHash.isEmpty() -> null
+            newHash.startsWith("#") -> newHash.substring(1)
+            else -> newHash
+        },
+    )
 }
 
 private fun trim(s: String): String = if (s.length == 1) "" else s

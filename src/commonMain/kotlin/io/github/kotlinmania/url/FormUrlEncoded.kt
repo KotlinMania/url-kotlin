@@ -20,7 +20,13 @@ internal fun encodeFormUrlencoded(s: String): String {
         when {
             c == ' ' -> sb.append('+')
             c.isLetterOrDigit() || c == '-' || c == '_' || c == '.' || c == '~' -> sb.append(c)
-            c.code < 128 -> sb.append('%').append(c.code.toString(16).uppercase().padStart(2, '0'))
+            c.code < 128 ->
+                sb.append('%').append(
+                    c.code
+                        .toString(16)
+                        .uppercase()
+                        .padStart(2, '0'),
+                )
             else -> {
                 val bytes = c.toString().encodeToByteArray()
                 for (b in bytes) {

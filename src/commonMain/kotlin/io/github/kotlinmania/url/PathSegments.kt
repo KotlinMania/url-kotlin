@@ -7,8 +7,9 @@ import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
 
 @HiddenFromObjC
-public class PathSegmentsMut(private val url: Url) {
-
+public class PathSegmentsMut(
+    private val url: Url,
+) {
     public fun clear(): PathSegmentsMut {
         url.setPath("/")
         return this

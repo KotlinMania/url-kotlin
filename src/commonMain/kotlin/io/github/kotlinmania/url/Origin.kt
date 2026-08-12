@@ -8,7 +8,6 @@ import kotlin.native.HiddenFromObjC
 
 @HiddenFromObjC
 public sealed class Origin {
-
     public data class Tuple(
         val scheme: String,
         val host: Host<String>,
@@ -23,16 +22,17 @@ public sealed class Origin {
 
     public fun isTuple(): Boolean = this is Tuple
 
-    override fun toString(): String = when (this) {
-        is Tuple -> "$scheme://${host.let {
-            when (it) {
-                is Host.Domain -> it.domain
-                is Host.Ipv4 -> it.address
-                is Host.Ipv6 -> "[${it.address}]"
-            }
-        }}${if (port != defaultPort(scheme) ?: -1) ":$port" else ""}"
-        is Opaque -> "null"
-    }
+    override fun toString(): String =
+        when (this) {
+            is Tuple -> "$scheme://${host.let {
+                when (it) {
+                    is Host.Domain -> it.domain
+                    is Host.Ipv4 -> it.address
+                    is Host.Ipv6 -> "[${it.address}]"
+                }
+            }}${if (port != defaultPort(scheme) ?: -1) ":$port" else ""}"
+            is Opaque -> "null"
+        }
 }
 
 internal fun originOfUrl(url: Url): Origin {
@@ -40,9 +40,12 @@ internal fun originOfUrl(url: Url): Origin {
     if (scheme == "file") return Origin.Opaque
     if (scheme == "blob") {
         val path = url.path()
-        val innerUrl = try {
-            Url.parse(path).getOrNull()
-        } catch (_: Exception) { null }
+        val innerUrl =
+            try {
+                Url.parse(path).getOrNull()
+            } catch (_: Exception) {
+                null
+            }
         if (innerUrl != null) return originOfUrl(innerUrl)
         return Origin.Opaque
     }
