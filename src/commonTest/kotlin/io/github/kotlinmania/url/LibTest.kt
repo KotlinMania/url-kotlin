@@ -558,4 +558,70 @@ class LibTest {
         val reparsed = Url.parse(encoded).getOrThrow()
         assertEquals(reparsed, url)
     }
+
+    @Test
+    fun testNewFilePaths() {
+        val root = Url.fromFilePath("/").getOrThrow()
+        assertEquals(Url.parse("file:///").getOrThrow(), root)
+        val path = Url.fromFilePath("/foo/bar").getOrThrow()
+        assertEquals(Url.parse("file:///foo/bar").getOrThrow(), path)
+        assertTrue(Url.fromFilePath("relative").isFailure)
+
+        val toPath = path.toFilePath().getOrThrow()
+        assertEquals("/foo/bar", toPath)
+    }
+
+    @Test
+    fun testNewDirectoryPaths() {
+        val dir = Url.fromDirectoryPath("/foo/bar").getOrThrow()
+        assertEquals(Url.parse("file:///foo/bar/").getOrThrow(), dir)
+    }
+
+    @Test
+    fun testOriginAsciiSerialization() {
+        assertEquals(
+            "http://example.net",
+            Url
+                .parse("http://example.net/")
+                .getOrThrow()
+                .origin()
+                .asciiSerialization(),
+        )
+        assertEquals(
+            "http://example.net:8080",
+            Url
+                .parse("http://example.net:8080/")
+                .getOrThrow()
+                .origin()
+                .asciiSerialization(),
+        )
+        assertEquals("null", Origin.newOpaque().asciiSerialization())
+    }
+
+    @Test
+    fun testCountDigits() {
+        assertEquals(1, countDigits(0))
+        assertEquals(1, countDigits(1))
+        assertEquals(1, countDigits(9))
+        assertEquals(2, countDigits(10))
+        assertEquals(2, countDigits(99))
+        assertEquals(3, countDigits(100))
+        assertEquals(4, countDigits(9999))
+        assertEquals(5, countDigits(65535))
+    }
+
+    @Test
+    fun testSlicingPositions() {
+        val u = Url.parse("http://user:pass@example.com:8080/path/to?query#fragment").getOrThrow()
+        assertEquals("http://user:pass@example.com:8080/path/to?query", u[Position.BeforeScheme, Position.AfterQuery])
+        assertEquals("user:pass@example.com:8080", u[Position.BeforeUsername, Position.AfterPort])
+        assertEquals("path/to", u[Position.BeforePath, Position.AfterPath].removePrefix("/"))
+    }
+
+    @Test
+    fun testPathSegmentsExtend() {
+        val u = Url.parse("https://github.com/").getOrThrow()
+        u.pathSegmentsMut().getOrThrow().extend(listOf("servo", "rust-url", "issues", "188"))
+        assertEquals("https://github.com/servo/rust-url/issues/188", u.asStr())
+    }
 }

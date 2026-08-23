@@ -1,6 +1,6 @@
 # port-lint Proposed Changes
 
-**Generated:** 2026-05-26
+**Generated:** 2026-08-23
 **Source:** tmp/url/src
 **Target:** src/commonMain/kotlin/io/github/kotlinmania/url
 
