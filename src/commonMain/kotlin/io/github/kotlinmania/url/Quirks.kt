@@ -1,5 +1,34 @@
 // port-lint: source quirks.rs
+@file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+
 package io.github.kotlinmania.url
+
+import kotlin.experimental.ExperimentalObjCRefinement
+import kotlin.native.HiddenFromObjC
+
+@HiddenFromObjC
+public data class InternalComponents(
+    public val schemeEnd: Int,
+    public val usernameEnd: Int,
+    public val hostStart: Int,
+    public val hostEnd: Int,
+    public val port: Int?,
+    public val pathStart: Int,
+    public val queryStart: Int?,
+    public val fragmentStart: Int?,
+)
+
+public fun internalComponents(url: Url): InternalComponents =
+    InternalComponents(
+        schemeEnd = url.schemeEnd,
+        usernameEnd = url.usernameEnd,
+        hostStart = url.hostStart,
+        hostEnd = url.hostEnd,
+        port = url.port,
+        pathStart = url.pathStart,
+        queryStart = url.queryStart,
+        fragmentStart = url.fragmentStart,
+    )
 
 internal object Quirks {
     fun isSpecialScheme(scheme: String): Boolean =

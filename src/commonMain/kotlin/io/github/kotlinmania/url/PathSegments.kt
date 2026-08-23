@@ -40,4 +40,15 @@ public class PathSegmentsMut(
         }
         return this
     }
+
+    public fun extend(segments: Iterable<String>): PathSegmentsMut {
+        for (segment in segments) {
+            if (segment == "." || segment == "..") continue
+            push(segment)
+        }
+        return this
+    }
+
+    public fun extend(segments: Array<out String>): PathSegmentsMut =
+        extend(segments.asIterable())
 }

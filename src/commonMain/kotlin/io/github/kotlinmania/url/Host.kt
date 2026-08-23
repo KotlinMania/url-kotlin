@@ -10,15 +10,21 @@ import kotlin.native.HiddenFromObjC
 public sealed class Host<out T> {
     public data class Domain<T>(
         val domain: T,
-    ) : Host<T>()
+    ) : Host<T>() {
+        override fun toString(): String = domain.toString()
+    }
 
     public data class Ipv4(
         val address: String,
-    ) : Host<Nothing>()
+    ) : Host<Nothing>() {
+        override fun toString(): String = address
+    }
 
     public data class Ipv6(
         val address: String,
-    ) : Host<Nothing>()
+    ) : Host<Nothing>() {
+        override fun toString(): String = "[$address]"
+    }
 
     internal fun toInternal(): HostInternal =
         when (this) {

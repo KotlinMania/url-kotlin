@@ -58,15 +58,14 @@ public class Url
 
             public fun options(): ParseOptions = ParseOptions()
 
-            public fun fromFilePath(path: String): Result<Url> {
-                // Platform-specific file path to URL conversion
-                return Result.failure(UrlError.NotSupported("fromFilePath"))
-            }
+            public fun fromFilePath(path: String): Result<Url> = pathToFileUrl(path)
 
             public fun fromDirectoryPath(path: String): Result<Url> {
                 val url = fromFilePath(path)
                 if (url.isSuccess && !url.getOrThrow().serialization.endsWith("/")) {
-                    url.getOrThrow().serialization += "/"
+                    val u = url.getOrThrow()
+                    u.serialization += "/"
+                    return Result.success(u)
                 }
                 return url
             }
@@ -251,7 +250,9 @@ public class Url
             return null
         }
 
-        public fun origin(): Origin = originOfUrl(this)
+        public fun origin(): Origin = urlOrigin(this)
+
+        public fun toFilePath(): Result<String> = fileUrlToPath(this)
 
         public fun scheme(): String = serialization.substring(0, schemeEnd)
 
@@ -723,3 +724,146 @@ internal fun defaultPort(scheme: String): Int? =
         "wss" -> 443
         else -> null
     }
+
+private fun encodePathSegment(segment: String): String =
+    buildString {
+        for (c in segment) {
+            when (c) {
+                ' ', '"', '#', '<', '>', '?', '^', '`', '{', '}', '|', '%', '\\' -> {
+                    val bytes = c.toString().encodeToByteArray()
+                    for (b in bytes) {
+                        append('%')
+                        append((b.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0'))
+                    }
+                }
+                in '\u0000'..'\u001F', in '\u007F'..'\u009F' -> {
+                    val bytes = c.toString().encodeToByteArray()
+                    for (b in bytes) {
+                        append('%')
+                        append((b.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0'))
+                    }
+                }
+                else -> append(c)
+            }
+        }
+    }
+
+private fun decodePercent(s: String): String? {
+    val bytes = mutableListOf<Byte>()
+    var i = 0
+    while (i < s.length) {
+        if (s[i] == '%') {
+            if (i + 2 >= s.length) return null
+            val hex = s.substring(i + 1, i + 3)
+            val byteVal = hex.toIntOrNull(16) ?: return null
+            bytes.add(byteVal.toByte())
+            i += 3
+        } else {
+            val charBytes = s[i].toString().encodeToByteArray()
+            for (b in charBytes) bytes.add(b)
+            i++
+        }
+    }
+    val byteArray = ByteArray(bytes.size) { bytes[it] }
+    return try {
+        byteArray.decodeToString()
+    } catch (_: Exception) {
+        null
+    }
+}
+
+internal fun pathToFileUrl(path: String): Result<Url> {
+    val isWindowsDrive =
+        path.length >= 2 &&
+            path[0].isLetter() &&
+            (path[1] == ':' && (path.length == 2 || path[2] == '/' || path[2] == '\\'))
+    val isWindowsPrefix = path.startsWith("\\\\?\\") || path.startsWith("//?/")
+    val isUnc = (path.startsWith("\\\\") || path.startsWith("//")) && !isWindowsPrefix
+
+    val normalizedPath = path.replace('\\', '/')
+    if (!normalizedPath.startsWith("/") && !isWindowsDrive && !isWindowsPrefix && !isUnc) {
+        return Result.failure(UrlError.NotSupported("relative path"))
+    }
+
+    if (isUnc) {
+        val trimmed = normalizedPath.trimStart('/')
+        val slashIdx = trimmed.indexOf('/')
+        val server = if (slashIdx >= 0) trimmed.substring(0, slashIdx) else trimmed
+        val rest = if (slashIdx >= 0) trimmed.substring(slashIdx) else "/"
+        val parsedHost = Host.parse(server).getOrNull() ?: return Result.failure(UrlError.InvalidDomainCharacter)
+        val hostStr = server
+        val rawSegments = rest.split('/').filter { it.isNotEmpty() }
+        val encodedSegments = rawSegments.map { encodePathSegment(it) }
+        val pathStr = "/" + encodedSegments.joinToString("/")
+        val serialization = "file://$hostStr$pathStr"
+        val schemeEnd = 4
+        val usernameEnd = 7
+        val hostStart = 7
+        val hostEnd = hostStart + hostStr.length
+        val hostInternal = parsedHost.toInternal()
+        val pathStart = hostEnd
+        return Result.success(
+            Url(
+                serialization = serialization,
+                schemeEnd = schemeEnd,
+                usernameEnd = usernameEnd,
+                hostStart = hostStart,
+                hostEnd = hostEnd,
+                host = hostInternal,
+                port = null,
+                pathStart = pathStart,
+                queryStart = null,
+                fragmentStart = null,
+            ),
+        )
+    }
+
+    if (isWindowsDrive) {
+        val drive = normalizedPath.substring(0, 2)
+        val rest = if (normalizedPath.length > 2) normalizedPath.substring(2) else ""
+        val rawSegments = rest.split('/').filter { it.isNotEmpty() }
+        val encodedSegments = rawSegments.map { encodePathSegment(it) }
+        val pathStr = if (encodedSegments.isEmpty()) "/$drive" else "/$drive/" + encodedSegments.joinToString("/")
+        val serialization = "file://$pathStr"
+        return Url.parse(serialization)
+    }
+
+    val rawSegments = normalizedPath.split('/').filter { it.isNotEmpty() }
+    val encodedSegments = rawSegments.map { encodePathSegment(it) }
+    val pathStr = if (encodedSegments.isEmpty()) "/" else "/" + encodedSegments.joinToString("/")
+    val serialization = "file://$pathStr"
+    return Url.parse(serialization)
+}
+
+internal fun fileUrlToPath(url: Url): Result<String> {
+    if (url.scheme() != "file") return Result.failure(UrlError.NotSupported("scheme is not file"))
+    val h = url.host()
+    val hostOk = h == null || (h is Host.Domain && (h.domain == "localhost" || h.domain == ""))
+    val isUnc = h != null && !hostOk
+
+    val segments = url.pathSegments() ?: return Result.failure(UrlError.NotSupported("no path segments"))
+    val decodedSegments = mutableListOf<String>()
+    for (seg in segments) {
+        val dec = decodePercent(seg) ?: return Result.failure(UrlError.NotSupported("invalid percent encoding"))
+        if ('\u0000' in dec) return Result.failure(UrlError.NotSupported("contains null byte"))
+        decodedSegments.add(dec)
+    }
+
+    if (isUnc) {
+        val server = (h as? Host.Domain)?.domain ?: return Result.failure(UrlError.NotSupported("invalid unc host"))
+        val joined = decodedSegments.joinToString("\\")
+        return Result.success("\\\\$server\\$joined")
+    }
+
+    if (decodedSegments.isNotEmpty() &&
+        decodedSegments[0].length == 2 &&
+        decodedSegments[0][0].isLetter() &&
+        decodedSegments[0][1] == ':'
+    ) {
+        val drive = decodedSegments[0]
+        val rest = decodedSegments.drop(1)
+        return Result.success(if (rest.isEmpty()) "$drive\\" else "$drive\\" + rest.joinToString("\\"))
+    }
+
+    return Result.success("/" + decodedSegments.joinToString("/"))
+}
