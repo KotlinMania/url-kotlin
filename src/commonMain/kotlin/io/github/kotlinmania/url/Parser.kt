@@ -6,13 +6,13 @@ package io.github.kotlinmania.url
 import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
 
-public enum class Context {
+internal enum class Context {
     UrlParser,
     Setter,
     PathSegmentSetter,
 }
 
-public class Input internal constructor(
+internal class Input internal constructor(
     private val str: String,
     private var index: Int = 0,
 ) : Iterator<Char> {
@@ -163,7 +163,7 @@ internal data class HostAndPort(
 )
 
 @HiddenFromObjC
-public class Parser internal constructor(
+internal class Parser internal constructor(
     internal var serialization: StringBuilder = StringBuilder(),
     internal val baseUrl: Url? = null,
     internal val queryEncodingOverride: EncodingOverride = null,
@@ -1454,7 +1454,7 @@ public class Parser internal constructor(
     }
 }
 
-public fun checkUrlCodePoint(
+internal fun checkUrlCodePoint(
     vfn: (SyntaxViolation) -> Unit,
     c: Char,
     input: Input,
@@ -1520,7 +1520,7 @@ public fun startsWithWindowsDriveLetter(s: String): Boolean =
         (s[1] == ':' || s[1] == '|') &&
         (s.length == 2 || s[2] == '/' || s[2] == '\\' || s[2] == '?' || s[2] == '#')
 
-public fun startsWithWindowsDriveLetterSegment(input: Input): Boolean {
+internal fun startsWithWindowsDriveLetterSegment(input: Input): Boolean {
     val nextInput = input.clone()
     val a = nextInput.nextOrNull()
     val b = nextInput.nextOrNull()
