@@ -23,7 +23,7 @@ public sealed class Host<out T> {
     public data class Ipv6(
         val address: String,
     ) : Host<Nothing>() {
-        override fun toString(): String = "[$address]"
+        override fun toString(): String = "[${formatIpv6(address)}]"
     }
 
     internal fun toInternal(): HostInternal =
@@ -37,7 +37,7 @@ public sealed class Host<out T> {
         when (this) {
             is Domain<*> -> domain.toString()
             is Ipv4 -> address
-            is Ipv6 -> "[$address]"
+            is Ipv6 -> "[${formatIpv6(address)}]"
         }
 
     override fun equals(other: Any?): Boolean =
@@ -60,20 +60,40 @@ public sealed class Host<out T> {
         public fun parse(host: String): Result<Host<String>> {
             if (host.startsWith("[") && host.endsWith("]")) {
                 val inner = host.substring(1, host.length - 1)
-                if (isValidIpv6(inner)) return Result.success(Ipv6(inner))
-                return Result.failure(UrlError.InvalidIpv6Address)
+                val parsed = parseIpv6Addr(inner)
+                if (parsed.isSuccess) return Result.success(Ipv6(parsed.getOrThrow()))
+                return Result.failure(ParseError.InvalidIpv6Address)
             }
-            if (isValidIpv4(host)) return Result.success(Ipv4(host))
+            if (endsInANumber(host)) {
+                val parsedV4 = parseIpv4Addr(host) ?: return Result.failure(ParseError.InvalidIpv4Address)
+                return Result.success(Ipv4(parsedV4))
+            }
             if (isValidDomain(host)) return Result.success(Domain(host.lowercase()))
-            return Result.failure(UrlError.InvalidDomainCharacter)
+            return Result.failure(ParseError.InvalidDomainCharacter)
         }
 
-        public fun parseOpaque(host: String): Host<String> {
-            if (host.startsWith("[") && host.endsWith("]")) {
-                val inner = host.substring(1, host.length - 1)
-                if (isValidIpv6(inner)) return Ipv6(inner)
+        public fun parseOpaque(input: String): Result<Host<String>> {
+            if (input.startsWith("[")) {
+                if (!input.endsWith("]")) {
+                    return Result.failure(ParseError.InvalidIpv6Address)
+                }
+                val inner = input.substring(1, input.length - 1)
+                val parsed = parseIpv6Addr(inner)
+                if (parsed.isSuccess) return Result.success(Ipv6(parsed.getOrThrow()))
+                return Result.failure(ParseError.InvalidIpv6Address)
             }
-            return Domain(host)
+
+            fun isInvalidHostChar(c: Char): Boolean =
+                c in "\u0000\t\n\r #/:<>?@[\\]^|"
+
+            for (c in input) {
+                if (isInvalidHostChar(c)) {
+                    return Result.failure(ParseError.InvalidDomainCharacter)
+                }
+            }
+
+            val encoded = PercentEncoding.utf8PercentEncode(input, PercentEncoding::shouldEncodeControls)
+            return Result.success(Domain(encoded))
         }
     }
 }
@@ -198,54 +218,83 @@ internal fun expandIpv6(short: String): String {
     return groups.joinToString(":")
 }
 
-internal fun shortenIpv6(expanded: String): String {
-    val groups = expanded.split(':')
-    val (bestStart, bestLen) = longestZeroSequence(groups)
+internal fun formatIpv6(expandedAddress: String): String {
+    val pieces = expandedAddress.split(':').map { it.toInt(16) }
+    if (pieces.size != 8) return expandedAddress
 
-    fun trim(g: String) = g.trimStart('0').let { if (it.isEmpty()) "0" else it }
-    if (bestLen < 2) return groups.joinToString(":") { trim(it) }
-    val before = groups.take(bestStart)
-    val after = groups.drop(bestStart + bestLen)
-    return buildString {
-        if (before.isNotEmpty()) append(before.joinToString(":") { trim(it) })
-        append("::")
-        if (after.isNotEmpty()) append(after.joinToString(":") { trim(it) })
-    }
-}
-
-internal fun longestZeroSequence(groups: List<String>): Pair<Int, Int> {
-    var bestStart = -1
-    var bestLen = 1
-    var i = 0
-    while (i < groups.size) {
-        if (groups[i] == "0000") {
-            var j = i
-            while (j < groups.size && groups[j] == "0000") j++
-            val len = j - i
-            if (len > bestLen) {
-                bestLen = len
-                bestStart = i
-            }
-            i = j
+    var longest = -1
+    var longestLength = -1
+    var start = -1
+    for (i in 0 until 8) {
+        if (pieces[i] == 0) {
+            if (start < 0) start = i
         } else {
-            i++
+            if (start >= 0) {
+                val len = i - start
+                if (len > longestLength) {
+                    longest = start
+                    longestLength = len
+                }
+                start = -1
+            }
         }
     }
-    return Pair(bestStart, bestLen)
+    if (start >= 0) {
+        val len = 8 - start
+        if (len > longestLength) {
+            longest = start
+            longestLength = len
+        }
+    }
+
+    val (compressStart, compressEnd) =
+        if (longestLength < 2) {
+            Pair(-1, -2)
+        } else {
+            Pair(longest, longest + longestLength)
+        }
+
+    val sb = StringBuilder()
+    var i = 0
+    while (i < 8) {
+        if (i == compressStart) {
+            sb.append(':')
+            if (i == 0) sb.append(':')
+            if (compressEnd < 8) {
+                i = compressEnd
+            } else {
+                break
+            }
+        }
+        sb.append(pieces[i].toString(16))
+        if (i < 7) {
+            sb.append(':')
+        }
+        i++
+    }
+    return sb.toString()
 }
 
+internal fun shortenIpv6(expanded: String): String = formatIpv6(expanded)
+
 internal fun endsInANumber(s: String): Boolean {
-    val lastDot = s.lastIndexOf('.')
-    val lastLabel = if (lastDot >= 0) s.substring(lastDot + 1) else s
-    if (lastLabel.isEmpty()) return false
-    return (parseIpv4Number(lastLabel) != null)
+    val parts = s.split('.')
+    if (parts.isEmpty()) return false
+    val last =
+        if (parts.last().isEmpty()) {
+            if (parts.size >= 2) parts[parts.size - 2] else return false
+        } else {
+            parts.last()
+        }
+    if (last.isNotEmpty() && last.all { it.isDigit() }) return true
+    return parseIpv4Number(last) != null
 }
 
 internal fun parseIpv6Addr(input: String): Result<String> {
-    if (input.isEmpty()) return Result.failure(UrlError.InvalidIpv6Address)
-    if (input.count { it == ':' } > 7) return Result.failure(UrlError.InvalidIpv6Address)
+    if (input.isEmpty()) return Result.failure(ParseError.InvalidIpv6Address)
+    if (input.count { it == ':' } > 7) return Result.failure(ParseError.InvalidIpv6Address)
     val hasDoubleColon = "::" in input
-    if (hasDoubleColon && input.split("::").size > 2) return Result.failure(UrlError.InvalidIpv6Address)
+    if (hasDoubleColon && input.split("::").size > 2) return Result.failure(ParseError.InvalidIpv6Address)
 
     fun parseHexPiece(s: String): String? {
         if (s.isEmpty() || s.length > 4) return null
@@ -259,7 +308,7 @@ internal fun parseIpv6Addr(input: String): Result<String> {
 
     val leftGroups = mutableListOf<String>()
     for (piece in leftPieces) {
-        leftGroups.add(parseHexPiece(piece) ?: return Result.failure(UrlError.InvalidIpv6Address))
+        leftGroups.add(parseHexPiece(piece) ?: return Result.failure(ParseError.InvalidIpv6Address))
     }
 
     val rightHexGroups = mutableListOf<String>()
@@ -268,16 +317,16 @@ internal fun parseIpv6Addr(input: String): Result<String> {
     if (rightPieces.isNotEmpty()) {
         val last = rightPieces.last()
         if (last.contains('.')) {
-            val ipv4Addr = parseIpv4Addr(last) ?: return Result.failure(UrlError.InvalidIpv6Address)
+            val ipv4Addr = parseIpv4Addr(last) ?: return Result.failure(ParseError.InvalidIpv6Address)
             val nums = ipv4Addr.split('.').map { it.toInt() }
             ipv4Groups.add((nums[0] * 256 + nums[1]).toString(16).padStart(4, '0').lowercase())
             ipv4Groups.add((nums[2] * 256L + nums[3]).toString(16).padStart(4, '0').lowercase())
             for (piece in rightPieces.dropLast(1)) {
-                rightHexGroups.add(parseHexPiece(piece) ?: return Result.failure(UrlError.InvalidIpv6Address))
+                rightHexGroups.add(parseHexPiece(piece) ?: return Result.failure(ParseError.InvalidIpv6Address))
             }
         } else {
             for (piece in rightPieces) {
-                rightHexGroups.add(parseHexPiece(piece) ?: return Result.failure(UrlError.InvalidIpv6Address))
+                rightHexGroups.add(parseHexPiece(piece) ?: return Result.failure(ParseError.InvalidIpv6Address))
             }
         }
     }
@@ -285,8 +334,8 @@ internal fun parseIpv6Addr(input: String): Result<String> {
     val totalGroups = leftGroups.size + rightHexGroups.size + ipv4Groups.size
     val fillCount = 8 - totalGroups
 
-    if (fillCount < 0) return Result.failure(UrlError.InvalidIpv6Address)
-    if (fillCount > 0 && !hasDoubleColon) return Result.failure(UrlError.InvalidIpv6Address)
+    if (fillCount < 0) return Result.failure(ParseError.InvalidIpv6Address)
+    if (fillCount > 0 && !hasDoubleColon) return Result.failure(ParseError.InvalidIpv6Address)
 
     val allGroups = mutableListOf<String>()
     allGroups.addAll(leftGroups)
@@ -294,7 +343,7 @@ internal fun parseIpv6Addr(input: String): Result<String> {
     allGroups.addAll(rightHexGroups)
     allGroups.addAll(ipv4Groups)
 
-    if (allGroups.size != 8) return Result.failure(UrlError.InvalidIpv6Address)
+    if (allGroups.size != 8) return Result.failure(ParseError.InvalidIpv6Address)
 
     return Result.success(allGroups.joinToString(":"))
 }
