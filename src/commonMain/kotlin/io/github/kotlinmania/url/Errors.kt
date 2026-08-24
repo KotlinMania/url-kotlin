@@ -39,7 +39,7 @@ public sealed class ParseError(
         override val message: String,
     ) : ParseError(message)
 
-    public fun description(): String = details
+    public fun errorDescription(): String = details
 }
 
 public typealias UrlError = ParseError
@@ -65,7 +65,7 @@ public enum class SyntaxViolation(
     InvalidCodePoint("Code point is invalid in URL"),
     ;
 
-    public fun description(): String = text
+    public fun errorDescription(): String = text
 
     override fun toString(): String = text
 }
