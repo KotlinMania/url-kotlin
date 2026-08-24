@@ -736,6 +736,50 @@ tasks.register("hostTests") {
     )
 }
 
+// Patch generated SPM package for macOS platform and Swift fixes
+tasks.matching { it.name.contains("GenerateSPMPackage") }.configureEach {
+    doLast {
+        val spmDir =
+            layout.buildDirectory
+                .dir("SPMPackage")
+                .orNull
+                ?.asFile
+        if (spmDir != null && spmDir.exists()) {
+            spmDir.walkTopDown().forEach { file ->
+                if (file.name == "Package.swift") {
+                    val text = file.readText()
+                    if (!text.contains("platforms:")) {
+                        file.writeText(
+                            text.replaceFirst(
+                                Regex("""(let package = Package\s*\(\s*name:\s*"[^"]*",)"""),
+                                "$1\n    platforms: [.macOS(.v14)],",
+                            ),
+                        )
+                    }
+                } else if (file.extension == "swift") {
+                    var text = file.readText()
+                    var modified = false
+                    if (text.contains("String(reflecting:")) {
+                        text = text.replace("String(reflecting:", "Swift.String(reflecting:")
+                        modified = true
+                    }
+                    if (text.contains("case let res: { let _ref = res;")) {
+                        text = text.replace("case let res: { let _ref = res;", "case let res?: { let _ref = res;")
+                        modified = true
+                    }
+                    if (text.contains("case nil: .none; case let res:")) {
+                        text = text.replace("case nil: .none; case let res:", "case nil: nil; case let res?:")
+                        modified = true
+                    }
+                    if (modified) {
+                        file.writeText(text)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Swift Export smoke test — produces the SPM package via embedSwiftExportForXcode
 // (spawned with the Xcode-style env it requires) and runs `swift test` against it,
 // so Swift Export breakage surfaces locally, not only in the swift.yml CI job.

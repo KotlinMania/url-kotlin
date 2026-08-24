@@ -41,7 +41,7 @@ internal object Quirks {
 
 internal fun setHref(url: Url, input: String): Result<Unit> {
     val parsed = Url.parse(input)
-    if (parsed.isFailure) return Result.failure(parsed.exceptionOrNull() ?: UrlError.ParseFailed)
+    if (parsed.isFailure) return Result.failure(parsed.exceptionOrNull() ?: ParseError.ParseFailed)
     val parsedUrl = parsed.getOrThrow()
     url.serialization = parsedUrl.serialization
     url.schemeEnd = parsedUrl.schemeEnd
@@ -102,16 +102,16 @@ fun setPassword(url: Url, newPassword: String) {
 fun host(url: Url): String = url.hostStr() ?: ""
 
 fun setHost(url: Url, newHost: String): Result<Unit> {
-    if (url.cannotBeABase()) return Result.failure(UrlError.CannotSetHost)
+    if (url.cannotBeABase()) return Result.failure(ParseError.CannotSetHost)
     if (newHost.isEmpty()) {
-        if (url.isSpecial() && url.scheme() != "file") return Result.failure(UrlError.EmptyHost)
+        if (url.isSpecial() && url.scheme() != "file") return Result.failure(ParseError.EmptyHost)
         return url.setHost(newHost)
     }
     val hostOnly =
         if (!newHost.startsWith("[") || !newHost.endsWith("]")) {
             val colonIdx = newHost.indexOf(':')
             when {
-                colonIdx == 0 -> return Result.failure(UrlError.InvalidDomainCharacter)
+                colonIdx == 0 -> return Result.failure(ParseError.InvalidDomainCharacter)
                 colonIdx > 0 -> newHost.substring(0, colonIdx)
                 else -> newHost
             }
@@ -120,7 +120,7 @@ fun setHost(url: Url, newHost: String): Result<Unit> {
         }
 
     val parsedHost = Host.parse(hostOnly)
-    if (parsedHost.isFailure) return Result.failure(UrlError.InvalidDomainCharacter)
+    if (parsedHost.isFailure) return Result.failure(ParseError.InvalidDomainCharacter)
 
     val optPort: Int? =
         if (!newHost.startsWith("[") || !newHost.endsWith("]")) {
@@ -143,7 +143,7 @@ fun setHost(url: Url, newHost: String): Result<Unit> {
         }
     if (domainStr == "") {
         val hasCreds = url.username().isNotEmpty() || (url.password()?.isNotEmpty() == true)
-        if (hasCreds || optPort != null || url.port != null) return Result.failure(UrlError.EmptyHost)
+        if (hasCreds || optPort != null || url.port != null) return Result.failure(ParseError.EmptyHost)
     }
 
     url.setHostInternal(hostValue, optPort)
@@ -153,14 +153,14 @@ fun setHost(url: Url, newHost: String): Result<Unit> {
 fun hostname(url: Url): String = url.hostStr() ?: ""
 
 fun setHostname(url: Url, newHostname: String): Result<Unit> {
-    if (url.cannotBeABase()) return Result.failure(UrlError.CannotSetHost)
+    if (url.cannotBeABase()) return Result.failure(ParseError.CannotSetHost)
 
     if (newHostname.isEmpty() && url.isSpecial() && url.scheme() != "file") {
-        return Result.failure(UrlError.EmptyHost)
+        return Result.failure(ParseError.EmptyHost)
     }
 
     val parsedHost = Host.parse(newHostname)
-    if (parsedHost.isFailure) return Result.failure(UrlError.InvalidDomainCharacter)
+    if (parsedHost.isFailure) return Result.failure(ParseError.InvalidDomainCharacter)
 
     val host = parsedHost.getOrThrow()
     val domainStr =
@@ -171,10 +171,10 @@ fun setHostname(url: Url, newHostname: String): Result<Unit> {
     if (domainStr == "") {
         val schemeType = url.scheme()
         if (schemeType in specialSchemes && schemeType != "file") {
-            return Result.failure(UrlError.EmptyHost)
+            return Result.failure(ParseError.EmptyHost)
         }
         if (url.port != null || url.username().isNotEmpty() || (url.password()?.isNotEmpty() == true)) {
-            return Result.failure(UrlError.EmptyHost)
+            return Result.failure(ParseError.EmptyHost)
         }
     }
 
@@ -186,10 +186,10 @@ fun port(url: Url): String = url.slice(Position.BeforePort, Position.AfterPort)
 
 fun setPort(url: Url, newPort: String): Result<Unit> {
     if (!url.hasHost() || url.host() == Host.Domain("") || url.scheme() == "file") {
-        return Result.failure(UrlError.InvalidPort)
+        return Result.failure(ParseError.InvalidPort)
     }
     val portNum = if (newPort.isEmpty()) null else newPort.toIntOrNull()
-    if (portNum == null && newPort.isNotEmpty()) return Result.failure(UrlError.InvalidPort)
+    if (portNum == null && newPort.isNotEmpty()) return Result.failure(ParseError.InvalidPort)
 
     val effectivePort = if (portNum != null && portNum == defaultPort(url.scheme())) null else portNum
     url.setPortInternal(effectivePort)

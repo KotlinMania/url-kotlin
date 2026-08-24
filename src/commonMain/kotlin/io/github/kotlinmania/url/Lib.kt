@@ -21,9 +21,14 @@ public class ParseOptions(
         ParseOptions(baseUrl, encodingOverride, new)
 
     public fun parse(input: String): Result<Url> {
-        // Basic URL parser - handles common URL patterns
-        val parser = BasicUrlParser(input, baseUrl, encodingOverride, violationFn)
-        return parser.parse()
+        val parser =
+            Parser(
+                baseUrl = baseUrl,
+                queryEncodingOverride = encodingOverride,
+                violationFn = violationFn,
+                context = Context.UrlParser,
+            )
+        return parser.parseUrl(input)
     }
 }
 
@@ -409,13 +414,13 @@ public class Url
         }
 
         public fun pathSegmentsMut(): Result<PathSegmentsMut> {
-            if (cannotBeABase()) return Result.failure(UrlError.NotSupported("cannot be a base"))
+            if (cannotBeABase()) return Result.failure(ParseError.NotSupported("cannot be a base"))
             return Result.success(PathSegmentsMut(this))
         }
 
         public fun setPort(port: Int?): Result<Unit> {
             if (!hasHost() || host() == Host.Domain("") || scheme() == "file") {
-                return Result.failure(UrlError.NotSupported("setPort"))
+                return Result.failure(ParseError.NotSupported("setPort"))
             }
             var effectivePort = port
             if (effectivePort != null && effectivePort == defaultPort(scheme())) {
@@ -426,25 +431,25 @@ public class Url
         }
 
         public fun setHost(host: String?): Result<Unit> {
-            if (cannotBeABase()) return Result.failure(UrlError.CannotSetHost)
+            if (cannotBeABase()) return Result.failure(ParseError.CannotSetHost)
 
             val schemeType = scheme()
             if (host != null) {
                 if (host.isEmpty() && isSpecial() && schemeType != "file") {
-                    return Result.failure(UrlError.EmptyHost)
+                    return Result.failure(ParseError.EmptyHost)
                 }
                 var hostSubstr = host
                 if (!host.startsWith("[") || !host.endsWith("]")) {
                     val colonIdx = host.indexOf(':')
                     when {
-                        colonIdx == 0 -> return Result.failure(UrlError.InvalidDomainCharacter)
+                        colonIdx == 0 -> return Result.failure(ParseError.InvalidDomainCharacter)
                         colonIdx > 0 -> hostSubstr = host.substring(0, colonIdx)
                     }
                 }
                 setHostInternal(Host.Domain(hostSubstr), null)
             } else if (hasHost()) {
                 if (isSpecial() && schemeType != "file") {
-                    return Result.failure(UrlError.EmptyHost)
+                    return Result.failure(ParseError.EmptyHost)
                 }
                 if (serialization.length == pathStart) serialization += "/"
                 val newPathStart = if (schemeType == "file") schemeEnd + 3 else schemeEnd + 1
@@ -463,7 +468,7 @@ public class Url
         }
 
         public fun setIpHost(address: String): Result<Unit> {
-            if (cannotBeABase()) return Result.failure(UrlError.NotSupported("setIpHost"))
+            if (cannotBeABase()) return Result.failure(ParseError.NotSupported("setIpHost"))
             val isIpv6 = address.startsWith("[") || (isValidIpv6(address) && address.contains(':'))
             if (isIpv6) {
                 val inner = if (address.startsWith("[")) address.substring(1, address.length - 1) else address
@@ -479,7 +484,7 @@ public class Url
 
         public fun setPassword(password: String?): Result<Unit> {
             if (!hasHost() || host() == Host.Domain("") || scheme() == "file") {
-                return Result.failure(UrlError.NotSupported("setPassword"))
+                return Result.failure(ParseError.NotSupported("setPassword"))
             }
             val pwd = password ?: ""
             if (pwd.isNotEmpty()) {
@@ -501,7 +506,7 @@ public class Url
 
         public fun setUsername(username: String): Result<Unit> {
             if (!hasHost() || host() == Host.Domain("") || scheme() == "file") {
-                return Result.failure(UrlError.NotSupported("setUsername"))
+                return Result.failure(ParseError.NotSupported("setUsername"))
             }
             val usernameStart = schemeEnd + 3
             val afterUsername = serialization.substring(usernameEnd)
@@ -533,17 +538,17 @@ public class Url
 
         public fun setScheme(scheme: String): Result<Unit> {
             if (scheme.isEmpty() || !scheme.first().isLetter()) {
-                return Result.failure(UrlError.NotSupported("setScheme"))
+                return Result.failure(ParseError.NotSupported("setScheme"))
             }
             val newScheme = scheme.lowercase()
             val oldScheme = scheme()
             if (newScheme == "file" || oldScheme == "file") {
-                return Result.failure(UrlError.NotSupported("setScheme"))
+                return Result.failure(ParseError.NotSupported("setScheme"))
             }
             val newIsSpecial = newScheme in specialSchemes
             val oldIsSpecial = oldScheme in specialSchemes
-            if (newIsSpecial != oldIsSpecial) return Result.failure(UrlError.NotSupported("setScheme"))
-            if (newIsSpecial && !hasHost()) return Result.failure(UrlError.NotSupported("setScheme"))
+            if (newIsSpecial != oldIsSpecial) return Result.failure(ParseError.NotSupported("setScheme"))
+            if (newIsSpecial && !hasHost()) return Result.failure(ParseError.NotSupported("setScheme"))
             val oldSchemeEnd = schemeEnd
             schemeEnd = newScheme.length
             serialization = newScheme + serialization.substring(oldSchemeEnd)
@@ -715,16 +720,6 @@ internal val specialSchemes =
         "wss",
     )
 
-internal fun defaultPort(scheme: String): Int? =
-    when (scheme.lowercase()) {
-        "ftp" -> 21
-        "http" -> 80
-        "https" -> 443
-        "ws" -> 80
-        "wss" -> 443
-        else -> null
-    }
-
 private fun encodePathSegment(segment: String): String =
     buildString {
         for (c in segment) {
@@ -782,7 +777,7 @@ internal fun pathToFileUrl(path: String): Result<Url> {
 
     val normalizedPath = path.replace('\\', '/')
     if (!normalizedPath.startsWith("/") && !isWindowsDrive && !isWindowsPrefix && !isUnc) {
-        return Result.failure(UrlError.NotSupported("relative path"))
+        return Result.failure(ParseError.NotSupported("relative path"))
     }
 
     if (isUnc) {
@@ -790,7 +785,7 @@ internal fun pathToFileUrl(path: String): Result<Url> {
         val slashIdx = trimmed.indexOf('/')
         val server = if (slashIdx >= 0) trimmed.substring(0, slashIdx) else trimmed
         val rest = if (slashIdx >= 0) trimmed.substring(slashIdx) else "/"
-        val parsedHost = Host.parse(server).getOrNull() ?: return Result.failure(UrlError.InvalidDomainCharacter)
+        val parsedHost = Host.parse(server).getOrNull() ?: return Result.failure(ParseError.InvalidDomainCharacter)
         val hostStr = server
         val rawSegments = rest.split('/').filter { it.isNotEmpty() }
         val encodedSegments = rawSegments.map { encodePathSegment(it) }
@@ -836,21 +831,21 @@ internal fun pathToFileUrl(path: String): Result<Url> {
 }
 
 internal fun fileUrlToPath(url: Url): Result<String> {
-    if (url.scheme() != "file") return Result.failure(UrlError.NotSupported("scheme is not file"))
+    if (url.scheme() != "file") return Result.failure(ParseError.NotSupported("scheme is not file"))
     val h = url.host()
     val hostOk = h == null || (h is Host.Domain && (h.domain == "localhost" || h.domain == ""))
     val isUnc = h != null && !hostOk
 
-    val segments = url.pathSegments() ?: return Result.failure(UrlError.NotSupported("no path segments"))
+    val segments = url.pathSegments() ?: return Result.failure(ParseError.NotSupported("no path segments"))
     val decodedSegments = mutableListOf<String>()
     for (seg in segments) {
-        val dec = decodePercent(seg) ?: return Result.failure(UrlError.NotSupported("invalid percent encoding"))
-        if ('\u0000' in dec) return Result.failure(UrlError.NotSupported("contains null byte"))
+        val dec = decodePercent(seg) ?: return Result.failure(ParseError.NotSupported("invalid percent encoding"))
+        if ('\u0000' in dec) return Result.failure(ParseError.NotSupported("contains null byte"))
         decodedSegments.add(dec)
     }
 
     if (isUnc) {
-        val server = (h as? Host.Domain)?.domain ?: return Result.failure(UrlError.NotSupported("invalid unc host"))
+        val server = (h as? Host.Domain)?.domain ?: return Result.failure(ParseError.NotSupported("invalid unc host"))
         val joined = decodedSegments.joinToString("\\")
         return Result.success("\\\\$server\\$joined")
     }
