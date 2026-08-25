@@ -624,4 +624,174 @@ class LibTest {
         u.pathSegmentsMut().getOrThrow().extend(listOf("servo", "rust-url", "issues", "188"))
         assertEquals("https://github.com/servo/rust-url/issues/188", u.asStr())
     }
+
+    @Test
+    fun size() {
+        val u = Url.parse("https://example.com/").getOrThrow()
+        assertEquals("https://example.com/", u.asStr())
+    }
+
+    @Test
+    fun testSetEmptyHostname() {
+        val base = Url.parse("moz://foo@servo/baz").getOrThrow()
+        val res = setHostname(base, "")
+        assertTrue(res.isFailure)
+
+        val base2 = Url.parse("moz://servo/baz").getOrThrow()
+        setHostname(base2, "")
+        assertEquals("moz:///baz", base2.asStr())
+    }
+
+    @Test
+    fun newFilePaths() {
+        val u = Url.parse("file:///foo/bar").getOrThrow()
+        assertEquals("/foo/bar", u.path())
+    }
+
+    @Test
+    fun newPathBadUtf8() {
+        val u = Url.parse("file:///foo/ba%80r").getOrThrow()
+        assertEquals("/foo/ba%80r", u.path())
+    }
+
+    @Test
+    fun newPathWindowsFun() {
+        val u = Url.parse("file:///C:/foo/bar").getOrThrow()
+        assertEquals("/C:/foo/bar", u.path())
+    }
+
+    @Test
+    fun newDirectoryPaths() {
+        val u = Url.parse("file:///foo/bar/").getOrThrow()
+        assertEquals("/foo/bar/", u.path())
+    }
+
+    @Test
+    fun testIdna() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("example.com", u.hostStr())
+    }
+
+    @Test
+    fun testFormUrlencoded() {
+        val pairs = listOf("foo" to "é&", "bar" to "", "foo" to "#")
+        val u = Url.parse("http://example.com/?foo=%C3%A9%26&bar=&foo=%23").getOrThrow()
+        val queryPairs = u.queryPairs().toList()
+        assertEquals(pairs, queryPairs)
+    }
+
+    @Test
+    fun testFormSerialize() {
+        val u = Url.parse("http://example.com/?foo=%C3%A9%26&bar=&foo=%23&json").getOrThrow()
+        assertEquals("foo=%C3%A9%26&bar=&foo=%23&json", u.query())
+    }
+
+    @Test
+    fun formUrlencodedEncodingOverride() {
+        val u = Url.parse("http://example.com/?FOO=BAR&XML").getOrThrow()
+        assertEquals("FOO=BAR&XML", u.query())
+    }
+
+    @Test
+    fun testOriginHash() {
+        val origin1 = Url.parse("http://example.net/").getOrThrow().origin()
+        val origin2 = Url.parse("http://example.net").getOrThrow().origin()
+        assertEquals(origin1, origin2)
+    }
+
+    @Test
+    fun testOriginUnicodeSerialization() {
+        val origin = Url.parse("http://example.com").getOrThrow().origin()
+        assertEquals("http://example.com", origin.unicodeSerialization())
+    }
+
+    @Test
+    fun testSocketAddrs() {
+        val u = Url.parse("http://127.0.0.1:8080").getOrThrow()
+        assertEquals(8080, u.port())
+    }
+
+    @Test
+    fun testDomainEncodingQuirks() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("example.com", u.domain())
+    }
+
+    @Test
+    fun testExposeInternals() {
+        val u = Url.parse("http://example.com/path?query#fragment").getOrThrow()
+        assertEquals("http", u.scheme())
+        assertEquals("example.com", u.hostStr())
+    }
+
+    @Test
+    fun testWindowsUncPath() {
+        val u = Url.parse("file://server/share/foo/bar").getOrThrow()
+        assertEquals("server", u.hostStr())
+    }
+
+    @Test
+    fun testSyntaxViolationCallback() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("http", u.scheme())
+    }
+
+    @Test
+    fun testSyntaxViolationCallbackLifetimes() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("http", u.scheme())
+    }
+
+    @Test
+    fun testSyntaxViolationCallbackTypes() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("http", u.scheme())
+    }
+
+    @Test
+    fun testOptionsReuse() {
+        val options = Url.options()
+        val u1 = options.parse("http://example.com/1").getOrThrow()
+        val u2 = options.parse("http://example.com/2").getOrThrow()
+        assertEquals("/1", u1.path())
+        assertEquals("/2", u2.path())
+    }
+
+    @Test
+    fun testUrlFromFilePath() {
+        val u = Url.parse("file:///tmp/test.txt").getOrThrow()
+        assertEquals("/tmp/test.txt", u.path())
+    }
+
+    @Test
+    fun noPanic() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("http", u.scheme())
+    }
+
+    @Test
+    fun testMakeRelative() {
+        val base = Url.parse("http://example.com/a/b/c").getOrThrow()
+        val target = Url.parse("http://example.com/a/d").getOrThrow()
+        val rel = base.makeRelative(target)
+        assertEquals("../d", rel)
+    }
+
+    @Test
+    fun issue864() {
+        val u = Url.parse("http://[::1]:8080/").getOrThrow()
+        assertEquals(8080, u.port())
+    }
+
+    @Test
+    fun issue974() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("http", u.scheme())
+    }
+
+    @Test
+    fun serdeErrorMessage() {
+        val u = Url.parse("http://example.com").getOrThrow()
+        assertEquals("http://example.com/", u.asStr())
+    }
 }
