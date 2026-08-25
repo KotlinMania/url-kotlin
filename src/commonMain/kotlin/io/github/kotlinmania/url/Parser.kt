@@ -879,7 +879,11 @@ internal class Parser internal constructor(
         if (hostAndPortRes.isFailure) {
             return Result.failure(hostAndPortRes.exceptionOrNull() ?: ParseError.ParseFailed)
         }
-        val (hostEnd, host, port, remainingAfterHost) = hostAndPortRes.getOrThrow()
+        val hostAndPort = hostAndPortRes.getOrThrow()
+        val hostEnd = hostAndPort.hostEnd
+        val host = hostAndPort.host
+        val port = hostAndPort.port
+        val remainingAfterHost = hostAndPort.remaining
         if (host == HostInternal.None && hasAuthority) {
             return Result.failure(ParseError.EmptyHost)
         }
