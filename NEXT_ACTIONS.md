@@ -4,10 +4,10 @@ Based on AST analysis, here are the concrete next steps.
 
 ## Summary
 
-- **Files Present:** 7/9 (77.8%)
-- **Function parity:** 152/273 matched (target 209) — 55.7%
-- **Class/type parity:** 15/34 matched (target 42) — 44.1%
-- **Combined symbol parity:** 167/307 matched (target 251) — 54.4%
+- **Files Present:** 7/7 (100.0%)
+- **Function parity:** 152/192 matched (target 211) — 79.2%
+- **Class/type parity:** 15/26 matched (target 43) — 57.7%
+- **Combined symbol parity:** 167/218 matched (target 254) — 76.6%
 - **Average inline-code cosine:** 0.48 (function body across 7 matched files)
 - **Average documentation cosine:** 0.00 (doc text across 7 matched files)
 - **Cheat-zeroed Files:** 0
@@ -29,7 +29,7 @@ Every matched file is listed below with function and type symbol parity.
 
 ### 1. host
 
-- **Target:** `url.Host [PROVENANCE-FALLBACK]`
+- **Target:** `url.Host`
 - **Similarity:** 0.19
 - **Dependents:** 2
 - **Priority Score:** 2091708.1
@@ -37,27 +37,10 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing functions:** `from`, `to_owned`, `parse_cow`, `parse_opaque_cow`, `into_owned`, `fmt`, `eq`, `write_ipv6`, `longest_zero_sequence`
 - **Types:** 2/2 matched (target 6)
 - **Missing types:** _none_
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `host.rs` vs expected `host.rs`
-- **Proposed provenance header:** `// port-lint: source host.rs` (current: `// port-lint: source host.rs`)
-- **Lint issues:** 1
 
-### 2. quirks
+### 2. lib
 
-- **Target:** `url.Quirks [PROVENANCE-FALLBACK]`
-- **Similarity:** 0.83
-- **Dependents:** 1
-- **Priority Score:** 1002601.7
-- **Functions:** 25/25 matched (target 27)
-- **Missing functions:** _none_
-- **Types:** 1/1 matched (target 2)
-- **Missing types:** _none_
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `quirks.rs` vs expected `quirks.rs`
-- **Proposed provenance header:** `// port-lint: source quirks.rs` (current: `// port-lint: source quirks.rs`)
-- **Lint issues:** 1
-
-### 3. lib
-
-- **Target:** `url.Lib [PROVENANCE-FALLBACK]`
+- **Target:** `url.Lib`
 - **Similarity:** 0.40
 - **Dependents:** 0
 - **Priority Score:** 328906.0
@@ -65,13 +48,10 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing functions:** `into_string`, `socket_addrs`, `io_result`, `mutate`, `serialize_internal`, `deserialize_internal`, `from_str`, `try_from`, `fmt`, `from`, `eq`, `cmp`, `partial_cmp`, `hash`, `as_ref`, `slice_of`, `serialize`, `deserialize`, `expecting`, `visit_str`, `path_to_file_url_segments`, `path_to_file_url_segments_windows`, `file_url_segments_to_pathbuf`, `file_url_segments_to_pathbuf_windows`, `as_mut_string`, `drop`
 - **Types:** 3/9 matched (target 3)
 - **Missing types:** `Err`, `Error`, `RangeArg`, `UrlVisitor`, `Value`, `Finished`
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `lib.rs` vs expected `lib.rs`
-- **Proposed provenance header:** `// port-lint: source lib.rs` (current: `// port-lint: source lib.rs`)
-- **Lint issues:** 1
 
-### 4. parser
+### 3. parser
 
-- **Target:** `url.Errors [PROVENANCE-FALLBACK]`
+- **Target:** `url.Errors`
 - **Similarity:** 0.61
 - **Dependents:** 0
 - **Priority Score:** 66603.9
@@ -79,15 +59,10 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing functions:** `fmt`, `size_hint`
 - **Types:** 5/9 matched (target 25)
 - **Missing types:** `Pattern`, `Item`, `QueryPartIter`, `FragmentPartIter`
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `parser.rs` vs expected `parser.rs`
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `parser.rs` vs expected `parser.rs`
-- **Proposed provenance header:** `// port-lint: source parser.rs` (current: `// port-lint: source parser.rs`)
-- **Proposed provenance header:** `// port-lint: source parser.rs` (current: `// port-lint: source parser.rs`)
-- **Lint issues:** 2
 
-### 5. path_segments
+### 4. path_segments
 
-- **Target:** `url.PathSegments [PROVENANCE-FALLBACK]`
+- **Target:** `url.PathSegments`
 - **Similarity:** 0.34
 - **Dependents:** 0
 - **Priority Score:** 20806.6
@@ -95,13 +70,10 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing functions:** `new`, `drop`
 - **Types:** 1/1 matched
 - **Missing types:** _none_
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `path_segments.rs` vs expected `path_segments.rs`
-- **Proposed provenance header:** `// port-lint: source path_segments.rs` (current: `// port-lint: source path_segments.rs`)
-- **Lint issues:** 1
 
-### 6. slicing
+### 5. slicing
 
-- **Target:** `url.Slicing [PROVENANCE-FALLBACK]`
+- **Target:** `url.Slicing`
 - **Similarity:** 0.24
 - **Dependents:** 0
 - **Priority Score:** 20507.6
@@ -110,13 +82,21 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 1/2 matched (target 1)
 - **Missing types:** `Output`
 - **Tests:** 0/1 matched
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `slicing.rs` vs expected `slicing.rs`
-- **Proposed provenance header:** `// port-lint: source slicing.rs` (current: `// port-lint: source slicing.rs`)
-- **Lint issues:** 1
+
+### 6. quirks
+
+- **Target:** `url.Quirks`
+- **Similarity:** 0.83
+- **Dependents:** 0
+- **Priority Score:** 2601.7
+- **Functions:** 25/25 matched (target 29)
+- **Missing functions:** _none_
+- **Types:** 1/1 matched (target 3)
+- **Missing types:** _none_
 
 ### 7. origin
 
-- **Target:** `url.Origin [PROVENANCE-FALLBACK]`
+- **Target:** `url.Origin`
 - **Similarity:** 0.75
 - **Dependents:** 0
 - **Priority Score:** 702.5
@@ -124,9 +104,6 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing functions:** _none_
 - **Types:** 2/2 matched (target 4)
 - **Missing types:** _none_
-- **Provenance warning:** port-lint provenance header matched only after fallback normalization: `origin.rs` vs expected `origin.rs`
-- **Proposed provenance header:** `// port-lint: source origin.rs` (current: `// port-lint: source origin.rs`)
-- **Lint issues:** 1
 
 ## Success Criteria
 
