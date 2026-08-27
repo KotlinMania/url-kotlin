@@ -1,4 +1,4 @@
-// port-lint: tests quirks.rs
+// port-lint: tests url/src/quirks.rs
 package io.github.kotlinmania.url
 
 import kotlin.test.Test

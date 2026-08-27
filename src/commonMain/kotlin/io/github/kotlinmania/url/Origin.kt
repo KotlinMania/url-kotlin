@@ -1,4 +1,4 @@
-// port-lint: source origin.rs
+// port-lint: source url/src/origin.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.url
