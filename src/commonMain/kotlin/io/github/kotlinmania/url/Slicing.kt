@@ -107,3 +107,6 @@ public fun Url.index(position: Position): Int =
 
 public operator fun Url.get(start: Position, end: Position): String =
     serialization.substring(index(start), index(end))
+
+public operator fun Url.get(range: ClosedRange<Position>): String =
+    serialization.substring(index(range.start), index(range.endInclusive))

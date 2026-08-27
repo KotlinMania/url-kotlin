@@ -26,9 +26,18 @@ public sealed class Host<out T> {
         override fun toString(): String = "[${formatIpv6(address)}]"
     }
 
+    public fun toOwned(): Host<String> =
+        when (this) {
+            is Domain -> Domain(domain.toString())
+            is Ipv4 -> Ipv4(address)
+            is Ipv6 -> Ipv6(address)
+        }
+
+    public fun intoOwned(): Host<String> = toOwned()
+
     internal fun toInternal(): HostInternal =
         when (this) {
-            is Domain<*> -> HostInternal.Domain
+            is Domain<*> -> if (domain.toString().isEmpty()) HostInternal.None else HostInternal.Domain
             is Ipv4 -> HostInternal.Ipv4(address)
             is Ipv6 -> HostInternal.Ipv6(address)
         }
@@ -72,6 +81,8 @@ public sealed class Host<out T> {
             return Result.failure(ParseError.InvalidDomainCharacter)
         }
 
+        public fun parseCow(input: String): Result<Host<String>> = parse(input)
+
         public fun parseOpaque(input: String): Result<Host<String>> {
             if (input.startsWith("[")) {
                 if (!input.endsWith("]")) {
@@ -95,6 +106,8 @@ public sealed class Host<out T> {
             val encoded = PercentEncoding.utf8PercentEncode(input, PercentEncoding::shouldEncodeControls)
             return Result.success(Domain(encoded))
         }
+
+        public fun parseOpaqueCow(input: String): Result<Host<String>> = parseOpaque(input)
     }
 }
 
@@ -218,10 +231,7 @@ internal fun expandIpv6(short: String): String {
     return groups.joinToString(":")
 }
 
-internal fun formatIpv6(expandedAddress: String): String {
-    val pieces = expandedAddress.split(':').map { it.toInt(16) }
-    if (pieces.size != 8) return expandedAddress
-
+internal fun longestZeroSequence(pieces: List<Int>): Pair<Int, Int> {
     var longest = -1
     var longestLength = -1
     var start = -1
@@ -247,14 +257,15 @@ internal fun formatIpv6(expandedAddress: String): String {
         }
     }
 
-    val (compressStart, compressEnd) =
-        if (longestLength < 2) {
-            Pair(-1, -2)
-        } else {
-            Pair(longest, longest + longestLength)
-        }
+    return if (longestLength < 2) {
+        Pair(-1, -2)
+    } else {
+        Pair(longest, longest + longestLength)
+    }
+}
 
-    val sb = StringBuilder()
+internal fun writeIpv6(pieces: List<Int>, sb: StringBuilder) {
+    val (compressStart, compressEnd) = longestZeroSequence(pieces)
     var i = 0
     while (i < 8) {
         if (i == compressStart) {
@@ -272,6 +283,13 @@ internal fun formatIpv6(expandedAddress: String): String {
         }
         i++
     }
+}
+
+internal fun formatIpv6(expandedAddress: String): String {
+    val pieces = expandedAddress.split(':').map { it.toInt(16) }
+    if (pieces.size != 8) return expandedAddress
+    val sb = StringBuilder()
+    writeIpv6(pieces, sb)
     return sb.toString()
 }
 

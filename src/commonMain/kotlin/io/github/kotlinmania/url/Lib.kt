@@ -138,6 +138,8 @@ public class Url
 
         public fun asStr(): String = serialization
 
+        public fun intoString(): String = serialization
+
         public fun slice(): String = serialization
 
         public fun slice(from: Position, to: Position): String {
