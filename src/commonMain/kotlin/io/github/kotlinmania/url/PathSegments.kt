@@ -51,4 +51,8 @@ public class PathSegmentsMut(
 
     public fun extend(segments: Array<out String>): PathSegmentsMut =
         extend(segments.asIterable())
+
+    public companion object {
+        public fun new(url: Url): PathSegmentsMut = PathSegmentsMut(url)
+    }
 }
