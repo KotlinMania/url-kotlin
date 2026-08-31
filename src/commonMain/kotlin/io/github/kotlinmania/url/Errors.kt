@@ -1,4 +1,4 @@
-// port-lint: source url/src/parser.rs
+// port-lint: source parser.rs
 package io.github.kotlinmania.url
 
 public sealed class ParseError(
