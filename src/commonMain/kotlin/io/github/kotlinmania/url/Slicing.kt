@@ -1,4 +1,4 @@
-// port-lint: source url/src/slicing.rs
+// port-lint: source slicing.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.url

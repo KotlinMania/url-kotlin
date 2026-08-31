@@ -4,13 +4,13 @@ Based on AST analysis, here are the concrete next steps.
 
 ## Summary
 
-- **Files Present:** 7/9 (77.8%)
-- **Function parity:** 161/273 matched (target 222) — 59.0%
-- **Class/type parity:** 15/34 matched (target 44) — 44.1%
-- **Combined symbol parity:** 176/307 matched (target 266) — 57.3%
-- **Average inline-code cosine:** 0.57 (function body across 6 matched files)
-- **Average documentation cosine:** 0.00 (doc text across 6 matched files)
-- **Cheat-zeroed Files:** 1
+- **Files Present:** 7/7 (100.0%)
+- **Function parity:** 161/192 matched (target 222) — 83.9%
+- **Class/type parity:** 15/26 matched (target 44) — 57.7%
+- **Combined symbol parity:** 176/218 matched (target 266) — 80.7%
+- **Average inline-code cosine:** 0.54 (function body across 7 matched files)
+- **Average documentation cosine:** 0.00 (doc text across 7 matched files)
+- **Cheat-zeroed Files:** 0
 - **Critical Issues:** 4 files with <0.60 function similarity
 
 ## Priority 1: Fix Incomplete High-Dependency Files
@@ -27,7 +27,7 @@ No missing high-value files detected.
 
 Every matched file is listed below with function and type symbol parity.
 
-### 1. url.host
+### 1. host
 
 - **Target:** `url.Host`
 - **Similarity:** 0.42
@@ -38,29 +38,18 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 2/2 matched (target 6)
 - **Missing types:** _none_
 
-### 2. url.quirks
+### 2. lib
 
-- **Target:** `url.Quirks`
-- **Similarity:** 0.83
-- **Dependents:** 1
-- **Priority Score:** 1002601.7
-- **Functions:** 25/25 matched (target 29)
-- **Missing functions:** _none_
-- **Types:** 1/1 matched (target 3)
-- **Missing types:** _none_
-
-### 3. url.lib
-
-- **Target:** `url.Lib [STUB]`
-- **Similarity:** 0.00
+- **Target:** `url.Lib`
+- **Similarity:** 0.40
 - **Dependents:** 0
-- **Priority Score:** 318910.0
+- **Priority Score:** 318906.0
 - **Functions:** 55/80 matched (target 70)
 - **Missing functions:** `socket_addrs`, `io_result`, `mutate`, `serialize_internal`, `deserialize_internal`, `from_str`, `try_from`, `fmt`, `from`, `eq`, `cmp`, `partial_cmp`, `hash`, `as_ref`, `slice_of`, `serialize`, `deserialize`, `expecting`, `visit_str`, `path_to_file_url_segments`, `path_to_file_url_segments_windows`, `file_url_segments_to_pathbuf`, `file_url_segments_to_pathbuf_windows`, `as_mut_string`, `drop`
 - **Types:** 3/9 matched (target 3)
 - **Missing types:** `Err`, `Error`, `RangeArg`, `UrlVisitor`, `Value`, `Finished`
 
-### 4. url.parser
+### 3. parser
 
 - **Target:** `url.Errors`
 - **Similarity:** 0.61
@@ -71,7 +60,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 5/9 matched (target 25)
 - **Missing types:** `Pattern`, `Item`, `QueryPartIter`, `FragmentPartIter`
 
-### 5. url.path_segments
+### 4. path_segments
 
 - **Target:** `url.PathSegments`
 - **Similarity:** 0.45
@@ -82,7 +71,7 @@ Every matched file is listed below with function and type symbol parity.
 - **Types:** 1/1 matched
 - **Missing types:** _none_
 
-### 6. url.slicing
+### 5. slicing
 
 - **Target:** `url.Slicing`
 - **Similarity:** 0.33
@@ -94,7 +83,18 @@ Every matched file is listed below with function and type symbol parity.
 - **Missing types:** `Output`
 - **Tests:** 1/1 matched
 
-### 7. url.origin
+### 6. quirks
+
+- **Target:** `url.Quirks`
+- **Similarity:** 0.83
+- **Dependents:** 0
+- **Priority Score:** 2601.7
+- **Functions:** 25/25 matched (target 29)
+- **Missing functions:** _none_
+- **Types:** 1/1 matched (target 3)
+- **Missing types:** _none_
+
+### 7. origin
 
 - **Target:** `url.Origin`
 - **Similarity:** 0.75
