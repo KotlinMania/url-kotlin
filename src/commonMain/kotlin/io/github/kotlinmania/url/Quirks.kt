@@ -1,4 +1,4 @@
-// port-lint: source quirks.rs
+// port-lint: source url/src/quirks.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.url
