@@ -1,4 +1,4 @@
-// port-lint: tests slicing.rs
+// port-lint: tests url/src/slicing.rs
 package io.github.kotlinmania.url
 
 import kotlin.test.Test
