@@ -1,4 +1,4 @@
-// port-lint: source path_segments.rs
+// port-lint: source url/src/path_segments.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.url
