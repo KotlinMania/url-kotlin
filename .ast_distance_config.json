@@ -2,7 +2,7 @@
   "type": "port",
   "name": "url-kotlin",
   "source": {
-    "path": "tmp",
+    "path": "tmp/url/src",
     "lang": "rust"
   },
   "target": {
