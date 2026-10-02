@@ -910,6 +910,12 @@ tasks.register("hostTests") {
     )
 }
 
+tasks.register("test") {
+    group = "verification"
+    description = "Runs the required test suite and Swift Export parity test."
+    dependsOn("hostTests", "swiftExportSmokeTest")
+}
+
 // Patch generated SPM Package.swift to include minimum macOS platform for Swift Concurrency
 tasks.matching { it.name.contains("GenerateSPMPackage") }.configureEach {
     doLast {
@@ -921,11 +927,19 @@ tasks.matching { it.name.contains("GenerateSPMPackage") }.configureEach {
         if (spmDir != null && spmDir.exists()) {
             spmDir.walkTopDown().filter { it.name == "Package.swift" }.forEach { file ->
                 val text = file.readText()
-                if (!text.contains("platforms:")) {
+                if (text.contains("platforms:")) {
+                    file.writeText(
+                        text.replace(
+                            Regex("""platforms:\s*\[[^\]]*\]"""),
+                            """platforms: [.macOS("15.0")]""",
+                        ),
+                    )
+                } else {
                     file.writeText(
                         text.replaceFirst(
                             Regex("""(let package = Package\s*\(\s*name:\s*"[^"]*",)"""),
-                            "$1\n    platforms: [.macOS(.v14)],",
+                            """$1
+    platforms: [.macOS("15.0")],""",
                         ),
                     )
                 }
@@ -975,11 +989,38 @@ tasks.register("swiftExportSmokeTest") {
                         "CONFIGURATION" to "Debug",
                         "ARCHS" to "arm64",
                         "FRAMEWORKS_FOLDER_PATH" to "Frameworks",
-                        "MACOSX_DEPLOYMENT_TARGET" to "14.0",
+                        "MACOSX_DEPLOYMENT_TARGET" to "15.0",
                         "DEPLOYMENT_TARGET_SETTING_NAME" to "MACOSX_DEPLOYMENT_TARGET",
                     ),
                 )
             }.assertNormalExitValue()
+
+        layout.buildDirectory
+            .dir("SPMPackage")
+            .orNull
+            ?.asFile
+            ?.takeIf { it.exists() }
+            ?.walkTopDown()
+            ?.filter { it.name == "Package.swift" }
+            ?.forEach { file ->
+                val text = file.readText()
+                if (text.contains("platforms:")) {
+                    file.writeText(
+                        text.replace(
+                            Regex("""platforms:\s*\[[^\]]*\]"""),
+                            """platforms: [.macOS("15.0")]""",
+                        ),
+                    )
+                } else {
+                    file.writeText(
+                        text.replaceFirst(
+                            Regex("""(let package = Package\s*\(\s*name:\s*"[^"]*",)"""),
+                            """$1
+    platforms: [.macOS("15.0")],""",
+                        ),
+                    )
+                }
+            }
 
         execOperations
             .exec {
