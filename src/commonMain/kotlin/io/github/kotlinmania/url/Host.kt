@@ -149,11 +149,18 @@ internal fun parseIpv4Number(s: String): Int? =
             val hex = s.substring(2)
             if (hex.isEmpty()) null else hex.toIntOrNull(16)
         }
+
         s.startsWith("0") && s.length > 1 -> {
             if (s.any { it !in '0'..'7' }) null else s.substring(1).toIntOrNull(8)
         }
-        s.firstOrNull() == '+' || s.firstOrNull() == '-' -> null
-        else -> s.toIntOrNull()
+
+        s.firstOrNull() == '+' || s.firstOrNull() == '-' -> {
+            null
+        }
+
+        else -> {
+            s.toIntOrNull()
+        }
     }
 
 internal fun parseIpv4Addr(s: String): String? {
@@ -162,26 +169,37 @@ internal fun parseIpv4Addr(s: String): String? {
     val nums = parts.map { parseIpv4Number(it) ?: return null }
     val addr: Long =
         when (parts.size) {
-            1 -> if (nums[0] > 0xFFFFFFFF) return null else nums[0].toLong() and 0xFFFFFFFFL
-            2 ->
+            1 -> {
+                if (nums[0] > 0xFFFFFFFF) return null else nums[0].toLong() and 0xFFFFFFFFL
+            }
+
+            2 -> {
                 if (nums[0] > 0xFF || nums[1] > 0xFFFFFF) {
                     return null
                 } else {
                     (nums[0].toLong() shl 24) or nums[1].toLong()
                 }
-            3 ->
+            }
+
+            3 -> {
                 if (nums[0] > 0xFF || nums[1] > 0xFF || nums[2] > 0xFFFF) {
                     return null
                 } else {
                     (nums[0].toLong() shl 24) or (nums[1].toLong() shl 16) or nums[2].toLong()
                 }
-            4 ->
+            }
+
+            4 -> {
                 if (nums.any { it > 0xFF }) {
                     return null
                 } else {
                     (nums[0].toLong() shl 24) or (nums[1].toLong() shl 16) or (nums[2].toLong() shl 8) or nums[3].toLong()
                 }
-            else -> return null
+            }
+
+            else -> {
+                return null
+            }
         }
     return "${(addr shr 24) and 0xFF}.${(addr shr 16) and 0xFF}.${(addr shr 8) and 0xFF}.${addr and 0xFF}"
 }

@@ -37,8 +37,14 @@ internal fun countDigits(n: Int): Int =
 
 public fun Url.index(position: Position): Int =
     when (position) {
-        Position.BeforeScheme -> 0
-        Position.AfterScheme -> schemeEnd
+        Position.BeforeScheme -> {
+            0
+        }
+
+        Position.AfterScheme -> {
+            schemeEnd
+        }
+
         Position.BeforeUsername -> {
             if (hasAuthority()) {
                 schemeEnd + "://".length
@@ -46,7 +52,11 @@ public fun Url.index(position: Position): Int =
                 schemeEnd + ":".length
             }
         }
-        Position.AfterUsername -> usernameEnd
+
+        Position.AfterUsername -> {
+            usernameEnd
+        }
+
         Position.BeforePassword -> {
             if (hasAuthority() && serialization.getOrNull(usernameEnd) == ':') {
                 usernameEnd + 1
@@ -54,6 +64,7 @@ public fun Url.index(position: Position): Int =
                 usernameEnd
             }
         }
+
         Position.AfterPassword -> {
             if (hasAuthority() && serialization.getOrNull(usernameEnd) == ':') {
                 hostStart - 1
@@ -61,8 +72,15 @@ public fun Url.index(position: Position): Int =
                 hostStart
             }
         }
-        Position.BeforeHost -> hostStart
-        Position.AfterHost -> hostEnd
+
+        Position.BeforeHost -> {
+            hostStart
+        }
+
+        Position.AfterHost -> {
+            hostEnd
+        }
+
         Position.BeforePort -> {
             if (port != null) {
                 hostEnd + 1
@@ -70,6 +88,7 @@ public fun Url.index(position: Position): Int =
                 hostEnd
             }
         }
+
         Position.AfterPort -> {
             if (port != null) {
                 hostEnd + 1 + countDigits(port!!)
@@ -77,7 +96,11 @@ public fun Url.index(position: Position): Int =
                 hostEnd
             }
         }
-        Position.BeforePath -> pathStart
+
+        Position.BeforePath -> {
+            pathStart
+        }
+
         Position.AfterPath -> {
             when {
                 queryStart != null -> queryStart!!
@@ -85,6 +108,7 @@ public fun Url.index(position: Position): Int =
                 else -> serialization.length
             }
         }
+
         Position.BeforeQuery -> {
             when {
                 queryStart != null -> queryStart!! + 1
@@ -92,9 +116,11 @@ public fun Url.index(position: Position): Int =
                 else -> serialization.length
             }
         }
+
         Position.AfterQuery -> {
             fragmentStart ?: serialization.length
         }
+
         Position.BeforeFragment -> {
             if (fragmentStart != null) {
                 fragmentStart!! + 1
@@ -102,7 +128,10 @@ public fun Url.index(position: Position): Int =
                 serialization.length
             }
         }
-        Position.AfterFragment -> serialization.length
+
+        Position.AfterFragment -> {
+            serialization.length
+        }
     }
 
 public operator fun Url.get(start: Position, end: Position): String =

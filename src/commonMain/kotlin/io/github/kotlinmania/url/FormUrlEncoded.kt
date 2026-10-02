@@ -18,15 +18,23 @@ internal fun encodeFormUrlencoded(s: String): String {
     val sb = StringBuilder(s.length)
     for (c in s) {
         when {
-            c == ' ' -> sb.append('+')
-            c.isLetterOrDigit() || c == '-' || c == '_' || c == '.' || c == '~' -> sb.append(c)
-            c.code < 128 ->
+            c == ' ' -> {
+                sb.append('+')
+            }
+
+            c.isLetterOrDigit() || c == '-' || c == '_' || c == '.' || c == '~' -> {
+                sb.append(c)
+            }
+
+            c.code < 128 -> {
                 sb.append('%').append(
                     c.code
                         .toString(16)
                         .uppercase()
                         .padStart(2, '0'),
                 )
+            }
+
             else -> {
                 val bytes = c.toString().encodeToByteArray()
                 for (b in bytes) {
@@ -44,7 +52,10 @@ internal fun decodeFormUrlencoded(s: String): String {
     while (i < s.length) {
         val c = s[i]
         when {
-            c == '+' -> bytes.add(' '.code.toByte())
+            c == '+' -> {
+                bytes.add(' '.code.toByte())
+            }
+
             c == '%' && i + 2 < s.length -> {
                 val hex = s.substring(i + 1, i + 3)
                 val byteVal = hex.toIntOrNull(16)
@@ -55,7 +66,10 @@ internal fun decodeFormUrlencoded(s: String): String {
                     bytes.addAll(c.toString().encodeToByteArray().toList())
                 }
             }
-            else -> bytes.addAll(c.toString().encodeToByteArray().toList())
+
+            else -> {
+                bytes.addAll(c.toString().encodeToByteArray().toList())
+            }
         }
         i++
     }

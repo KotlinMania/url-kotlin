@@ -145,21 +145,47 @@ public class Url
         public fun slice(from: Position, to: Position): String {
             val start =
                 when (from) {
-                    Position.BeforeScheme -> 0
-                    Position.AfterScheme -> schemeEnd
-                    Position.BeforeUsername -> if (hasAuthority()) schemeEnd + 3 else schemeEnd + 1
-                    Position.AfterUsername -> usernameEnd
-                    Position.BeforePassword -> if (password() != null) usernameEnd + 1 else usernameEnd
-                    Position.AfterPassword -> if (password() != null) hostStart - 1 else hostStart
-                    Position.BeforeHost -> hostStart
-                    Position.AfterHost -> hostEnd
-                    Position.BeforePort ->
+                    Position.BeforeScheme -> {
+                        0
+                    }
+
+                    Position.AfterScheme -> {
+                        schemeEnd
+                    }
+
+                    Position.BeforeUsername -> {
+                        if (hasAuthority()) schemeEnd + 3 else schemeEnd + 1
+                    }
+
+                    Position.AfterUsername -> {
+                        usernameEnd
+                    }
+
+                    Position.BeforePassword -> {
+                        if (password() != null) usernameEnd + 1 else usernameEnd
+                    }
+
+                    Position.AfterPassword -> {
+                        if (password() != null) hostStart - 1 else hostStart
+                    }
+
+                    Position.BeforeHost -> {
+                        hostStart
+                    }
+
+                    Position.AfterHost -> {
+                        hostEnd
+                    }
+
+                    Position.BeforePort -> {
                         if (port != null) {
                             val colonIdx = serialization.indexOf(':', hostEnd)
                             if (colonIdx >= 0) colonIdx + 1 else hostEnd
                         } else {
                             hostEnd
                         }
+                    }
+
                     Position.AfterPort -> {
                         val colonIdx = serialization.indexOf(':', hostEnd)
                         if (colonIdx >= 0) {
@@ -172,7 +198,11 @@ public class Url
                             hostEnd
                         }
                     }
-                    Position.BeforePath -> pathStart
+
+                    Position.BeforePath -> {
+                        pathStart
+                    }
+
                     Position.AfterPath -> {
                         val qs = queryStart
                         val fs = fragmentStart
@@ -184,28 +214,66 @@ public class Url
                             serialization.length
                         }
                     }
-                    Position.BeforeQuery -> queryStart?.let { it + 1 } ?: (fragmentStart ?: serialization.length)
-                    Position.AfterQuery -> fragmentStart ?: serialization.length
-                    Position.BeforeFragment -> fragmentStart?.let { it + 1 } ?: serialization.length
-                    Position.AfterFragment -> serialization.length
+
+                    Position.BeforeQuery -> {
+                        queryStart?.let { it + 1 } ?: (fragmentStart ?: serialization.length)
+                    }
+
+                    Position.AfterQuery -> {
+                        fragmentStart ?: serialization.length
+                    }
+
+                    Position.BeforeFragment -> {
+                        fragmentStart?.let { it + 1 } ?: serialization.length
+                    }
+
+                    Position.AfterFragment -> {
+                        serialization.length
+                    }
                 }
             val end =
                 when (to) {
-                    Position.BeforeScheme -> 0
-                    Position.AfterScheme -> schemeEnd
-                    Position.BeforeUsername -> if (hasAuthority()) schemeEnd + 3 else schemeEnd + 1
-                    Position.AfterUsername -> usernameEnd
-                    Position.BeforePassword -> if (password() != null) usernameEnd + 1 else usernameEnd
-                    Position.AfterPassword -> if (password() != null) hostStart - 1 else hostStart
-                    Position.BeforeHost -> hostStart
-                    Position.AfterHost -> hostEnd
-                    Position.BeforePort ->
+                    Position.BeforeScheme -> {
+                        0
+                    }
+
+                    Position.AfterScheme -> {
+                        schemeEnd
+                    }
+
+                    Position.BeforeUsername -> {
+                        if (hasAuthority()) schemeEnd + 3 else schemeEnd + 1
+                    }
+
+                    Position.AfterUsername -> {
+                        usernameEnd
+                    }
+
+                    Position.BeforePassword -> {
+                        if (password() != null) usernameEnd + 1 else usernameEnd
+                    }
+
+                    Position.AfterPassword -> {
+                        if (password() != null) hostStart - 1 else hostStart
+                    }
+
+                    Position.BeforeHost -> {
+                        hostStart
+                    }
+
+                    Position.AfterHost -> {
+                        hostEnd
+                    }
+
+                    Position.BeforePort -> {
                         if (port != null) {
                             val colonIdx = serialization.indexOf(':', hostEnd)
                             if (colonIdx >= 0) colonIdx + 1 else hostEnd
                         } else {
                             hostEnd
                         }
+                    }
+
                     Position.AfterPort -> {
                         val colonIdx = serialization.indexOf(':', hostEnd)
                         if (colonIdx >= 0) {
@@ -218,7 +286,11 @@ public class Url
                             hostEnd
                         }
                     }
-                    Position.BeforePath -> pathStart
+
+                    Position.BeforePath -> {
+                        pathStart
+                    }
+
                     Position.AfterPath -> {
                         val qs = queryStart
                         val fs = fragmentStart
@@ -230,10 +302,22 @@ public class Url
                             serialization.length
                         }
                     }
-                    Position.BeforeQuery -> queryStart?.let { it + 1 } ?: (fragmentStart ?: serialization.length)
-                    Position.AfterQuery -> fragmentStart ?: serialization.length
-                    Position.BeforeFragment -> fragmentStart?.let { it + 1 } ?: serialization.length
-                    Position.AfterFragment -> serialization.length
+
+                    Position.BeforeQuery -> {
+                        queryStart?.let { it + 1 } ?: (fragmentStart ?: serialization.length)
+                    }
+
+                    Position.AfterQuery -> {
+                        fragmentStart ?: serialization.length
+                    }
+
+                    Position.BeforeFragment -> {
+                        fragmentStart?.let { it + 1 } ?: serialization.length
+                    }
+
+                    Position.AfterFragment -> {
+                        serialization.length
+                    }
                 }
             return serialization.substring(start, end)
         }
@@ -593,12 +677,16 @@ public class Url
                     serialization = serialization.substring(0, queryStart!!)
                     after
                 }
+
                 fragmentStart != null -> {
                     val after = serialization.substring(fragmentStart!!)
                     serialization = serialization.substring(0, fragmentStart!!)
                     after
                 }
-                else -> ""
+
+                else -> {
+                    ""
+                }
             }
 
         @PublishedApi internal fun restoreAfterPath(oldAfterPathPosition: Int, afterPath: String) {
@@ -611,6 +699,7 @@ public class Url
         @PublishedApi internal fun setPortInternal(newPort: Int?) {
             when {
                 port == null && newPort == null -> {}
+
                 port != null && newPort == null -> {
                     serialization = serialization.substring(0, hostEnd) + serialization.substring(pathStart)
                     val offset = pathStart - hostEnd
@@ -618,7 +707,9 @@ public class Url
                     queryStart = queryStart?.let { it - offset }
                     fragmentStart = fragmentStart?.let { it - offset }
                 }
+
                 port != null && port == newPort -> {}
+
                 else -> {
                     val pathAndAfter = serialization.substring(pathStart)
                     serialization = serialization.substring(0, hostEnd) + ":$newPort"
@@ -733,6 +824,7 @@ private fun encodePathSegment(segment: String): String =
                         append((b.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0'))
                     }
                 }
+
                 in '\u0000'..'\u001F', in '\u007F'..'\u009F' -> {
                     val bytes = c.toString().encodeToByteArray()
                     for (b in bytes) {
@@ -740,7 +832,10 @@ private fun encodePathSegment(segment: String): String =
                         append((b.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0'))
                     }
                 }
-                else -> append(c)
+
+                else -> {
+                    append(c)
+                }
             }
         }
     }

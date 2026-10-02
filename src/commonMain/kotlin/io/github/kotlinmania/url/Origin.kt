@@ -33,7 +33,10 @@ public sealed class Origin {
 
     public fun asciiSerialization(): String =
         when (this) {
-            is Opaque -> "null"
+            is Opaque -> {
+                "null"
+            }
+
             is Tuple -> {
                 val hostStr = host.toString()
                 if (defaultPort(scheme) == port) {
@@ -46,7 +49,10 @@ public sealed class Origin {
 
     public fun unicodeSerialization(): String =
         when (this) {
-            is Opaque -> "null"
+            is Opaque -> {
+                "null"
+            }
+
             is Tuple -> {
                 val hostStr =
                     when (host) {
@@ -75,6 +81,7 @@ public fun urlOrigin(url: Url): Origin {
                 Origin.newOpaque()
             }
         }
+
         "ftp", "http", "https", "ws", "wss" -> {
             val host = url.host()
             val port = url.portOrKnownDefault()
@@ -84,7 +91,13 @@ public fun urlOrigin(url: Url): Origin {
                 Origin.newOpaque()
             }
         }
-        "file" -> Origin.newOpaque()
-        else -> Origin.newOpaque()
+
+        "file" -> {
+            Origin.newOpaque()
+        }
+
+        else -> {
+            Origin.newOpaque()
+        }
     }
 }

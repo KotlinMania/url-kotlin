@@ -397,13 +397,20 @@ internal class Parser internal constructor(
         while (remaining.hasNext()) {
             val c = remaining.next()
             when (c) {
-                in 'a'..'z', in '0'..'9', '+', '-', '.' -> serialization.append(c)
-                in 'A'..'Z' -> serialization.append(c.lowercaseChar())
+                in 'a'..'z', in '0'..'9', '+', '-', '.' -> {
+                    serialization.append(c)
+                }
+
+                in 'A'..'Z' -> {
+                    serialization.append(c.lowercaseChar())
+                }
+
                 ':' -> {
                     val schemeEnd = serialization.length
                     val schemeType = SchemeType.from(serialization.toString())
                     return Result.success(Triple(schemeType, schemeEnd, remaining))
                 }
+
                 else -> {
                     serialization.clear()
                     return Result.failure(ParseError.RelativeUrlWithoutBase)
@@ -438,6 +445,7 @@ internal class Parser internal constructor(
                 serialization.clear()
                 parseFile(input, schemeType, baseFileUrl)
             }
+
             SchemeType.SpecialNotFile -> {
                 val (slashesCount, remaining) = input.countMatching { it == '/' || it == '\\' }
                 if (baseUrl != null) {
@@ -459,7 +467,10 @@ internal class Parser internal constructor(
                 }
                 afterDoubleSlash(remaining, schemeType, schemeEnd)
             }
-            SchemeType.NotSpecial -> parseNonSpecial(input, schemeType, schemeEnd)
+
+            SchemeType.NotSpecial -> {
+                parseNonSpecial(input, schemeType, schemeEnd)
+            }
         }
     }
 
@@ -624,14 +635,21 @@ internal class Parser internal constructor(
                         ),
                     )
                 }
+
                 '?' -> {
                     val beforeQuery =
                         when {
-                            baseFileUrl.queryStart != null ->
+                            baseFileUrl.queryStart != null -> {
                                 baseFileUrl.serialization.substring(0, baseFileUrl.queryStart!!)
-                            baseFileUrl.fragmentStart != null ->
+                            }
+
+                            baseFileUrl.fragmentStart != null -> {
                                 baseFileUrl.serialization.substring(0, baseFileUrl.fragmentStart!!)
-                            else -> baseFileUrl.serialization
+                            }
+
+                            else -> {
+                                baseFileUrl.serialization
+                            }
                         }
                     serialization.append(beforeQuery)
                     val (queryStart, fragmentStart) =
@@ -651,16 +669,26 @@ internal class Parser internal constructor(
                         ),
                     )
                 }
-                '#' -> return fragmentOnly(baseFileUrl, input)
+
+                '#' -> {
+                    return fragmentOnly(baseFileUrl, input)
+                }
+
                 else -> {
                     if (!startsWithWindowsDriveLetterSegment(input)) {
                         val beforeQuery =
                             when {
-                                baseFileUrl.queryStart != null ->
+                                baseFileUrl.queryStart != null -> {
                                     baseFileUrl.serialization.substring(0, baseFileUrl.queryStart!!)
-                                baseFileUrl.fragmentStart != null ->
+                                }
+
+                                baseFileUrl.fragmentStart != null -> {
                                     baseFileUrl.serialization.substring(0, baseFileUrl.fragmentStart!!)
-                                else -> baseFileUrl.serialization
+                                }
+
+                                else -> {
+                                    baseFileUrl.serialization
+                                }
                             }
                         serialization.append(beforeQuery)
                         shortenPath(SchemeType.File, baseFileUrl.pathStart)
@@ -756,14 +784,21 @@ internal class Parser internal constructor(
                     ),
                 )
             }
+
             '?' -> {
                 val beforeQuery =
                     when {
-                        baseUrl.queryStart != null ->
+                        baseUrl.queryStart != null -> {
                             baseUrl.serialization.substring(0, baseUrl.queryStart!!)
-                        baseUrl.fragmentStart != null ->
+                        }
+
+                        baseUrl.fragmentStart != null -> {
                             baseUrl.serialization.substring(0, baseUrl.fragmentStart!!)
-                        else -> baseUrl.serialization
+                        }
+
+                        else -> {
+                            baseUrl.serialization
+                        }
                     }
                 serialization.append(beforeQuery)
                 val (queryStart, fragmentStart) =
@@ -783,7 +818,11 @@ internal class Parser internal constructor(
                     ),
                 )
             }
-            '#' -> return fragmentOnly(baseUrl, input)
+
+            '#' -> {
+                return fragmentOnly(baseUrl, input)
+            }
+
             '/', '\\' -> {
                 val (slashesCount, remaining) = input.countMatching { it == '/' || it == '\\' }
                 if (slashesCount >= 2) {
@@ -824,14 +863,21 @@ internal class Parser internal constructor(
                     remainingPath,
                 )
             }
+
             else -> {
                 val beforeQuery =
                     when {
-                        baseUrl.queryStart != null ->
+                        baseUrl.queryStart != null -> {
                             baseUrl.serialization.substring(0, baseUrl.queryStart!!)
-                        baseUrl.fragmentStart != null ->
+                        }
+
+                        baseUrl.fragmentStart != null -> {
                             baseUrl.serialization.substring(0, baseUrl.fragmentStart!!)
-                        else -> baseUrl.serialization
+                        }
+
+                        else -> {
+                            baseUrl.serialization
+                        }
                     }
                 serialization.append(beforeQuery)
                 popPath(schemeType, baseUrl.pathStart)
@@ -921,8 +967,15 @@ internal class Parser internal constructor(
                     }
                     lastAt = Pair(charCount, remaining.clone())
                 }
-                '/', '?', '#' -> break
-                '\\' -> if (schemeType.isSpecial()) break
+
+                '/', '?', '#' -> {
+                    break
+                }
+
+                '\\' -> {
+                    if (schemeType.isSpecial()) break
+                }
+
                 else -> {}
             }
             charCount++
@@ -930,7 +983,10 @@ internal class Parser internal constructor(
 
         val (userinfoCharCountVal, remainingAfterAt) =
             when {
-                lastAt == null -> return Result.success(Pair(toU32(serialization.length).getOrThrow(), input))
+                lastAt == null -> {
+                    return Result.success(Pair(toU32(serialization.length).getOrThrow(), input))
+                }
+
                 lastAt.first == 0 -> {
                     val (c, _) = lastAt.second.splitFirst()
                     if (c == '/' || c == '?' || c == '#' || (schemeType.isSpecial() && c == '\\')) {
@@ -938,7 +994,10 @@ internal class Parser internal constructor(
                     }
                     return Result.success(Pair(toU32(serialization.length).getOrThrow(), lastAt.second))
                 }
-                else -> lastAt
+
+                else -> {
+                    lastAt
+                }
             }
 
         var userinfoCharCount = userinfoCharCountVal
@@ -1108,12 +1167,14 @@ internal class Parser internal constructor(
                         pushPending(buffer.toString(), context, schemeType)
                         buffer.clear()
                     }
+
                     c == '/' && context != Context.PathSegmentSetter -> {
                         pushPending(buffer.toString(), context, schemeType)
                         serialization.append(c)
                         endsWithSlash = true
                         break
                     }
+
                     c == '\\' && context != Context.PathSegmentSetter && schemeType.isSpecial() -> {
                         pushPending(buffer.toString(), context, schemeType)
                         logViolation(SyntaxViolation.Backslash)
@@ -1121,11 +1182,13 @@ internal class Parser internal constructor(
                         endsWithSlash = true
                         break
                     }
+
                     (c == '?' || c == '#') && context == Context.UrlParser -> {
                         pushPending(buffer.toString(), context, schemeType)
                         currentInput = inputBeforeC
                         break
                     }
+
                     else -> {
                         checkUrlCodePoint(c, currentInput)
                         if (schemeType.isFile() &&
@@ -1160,12 +1223,14 @@ internal class Parser internal constructor(
                         serialization.append('/')
                     }
                 }
+
                 ".", "%2e", "%2E" -> {
                     serialization.setLength(segmentStart)
                     if (!serialization.endsWith('/')) {
                         serialization.append('/')
                     }
                 }
+
                 else -> {
                     if (schemeType.isFile() && segmentStart == pathStart + 1 && isWindowsDriveLetter(segmentBeforeSlash)) {
                         val firstChar = segmentBeforeSlash[0]
@@ -1291,6 +1356,7 @@ internal class Parser internal constructor(
         val (first, afterFirst) = currentInput.splitFirst()
         when (first) {
             '#' -> {}
+
             '?' -> {
                 queryStart = toU32(serialization.length).getOrThrow()
                 serialization.append('?')
@@ -1301,7 +1367,11 @@ internal class Parser internal constructor(
                     return Result.success(Pair(queryStart, null))
                 }
             }
-            null -> return Result.success(Pair(null, null))
+
+            null -> {
+                return Result.success(Pair(null, null))
+            }
+
             else -> {}
         }
 
@@ -1469,12 +1539,8 @@ internal fun checkUrlCodePoint(
         val b = nextInput.nextOrNull()
         if (a == null ||
             b == null ||
-            !a.isDigit() &&
-            a !in 'a'..'f' &&
-            a !in 'A'..'F' ||
-            !b.isDigit() &&
-            b !in 'a'..'f' &&
-            b !in 'A'..'F'
+            (!a.isDigit() && a !in 'a'..'f' && a !in 'A'..'F') ||
+            (!b.isDigit() && b !in 'a'..'f' && b !in 'A'..'F')
         ) {
             vfn(SyntaxViolation.PercentDecode)
         }
