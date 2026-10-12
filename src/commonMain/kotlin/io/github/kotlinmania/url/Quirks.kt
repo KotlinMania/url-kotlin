@@ -93,13 +93,13 @@ fun setUsername(url: Url, newUsername: String) {
     url.setUsername(newUsername)
 }
 
-fun password(url: Url): String = url.password() ?: ""
+fun password(url: Url): String = url.password().orEmpty()
 
 fun setPassword(url: Url, newPassword: String) {
     url.setPassword(if (newPassword.isEmpty()) null else newPassword)
 }
 
-fun host(url: Url): String = url.hostStr() ?: ""
+fun host(url: Url): String = url.hostStr().orEmpty()
 
 fun setHost(url: Url, newHost: String): Result<Unit> {
     if (url.cannotBeABase()) return Result.failure(ParseError.CannotSetHost)
@@ -150,7 +150,7 @@ fun setHost(url: Url, newHost: String): Result<Unit> {
     return Result.success(Unit)
 }
 
-fun hostname(url: Url): String = url.hostStr() ?: ""
+fun hostname(url: Url): String = url.hostStr().orEmpty()
 
 fun setHostname(url: Url, newHostname: String): Result<Unit> {
     if (url.cannotBeABase()) return Result.failure(ParseError.CannotSetHost)
