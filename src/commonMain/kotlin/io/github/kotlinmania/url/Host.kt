@@ -6,26 +6,43 @@ package io.github.kotlinmania.url
 import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
 
+/**
+ * The host name of an URL.
+ */
 @HiddenFromObjC
 public sealed class Host<out T> {
+    /**
+     * A DNS domain name, as '.' dot-separated labels.
+     * Non-ASCII labels are encoded in punycode per IDNA if this is the host of
+     * a special URL, or percent encoded for non-special URLs.
+     */
     public data class Domain<T>(
         val domain: T,
     ) : Host<T>() {
         override fun toString(): String = domain.toString()
     }
 
+    /**
+     * An IPv4 address.
+     */
     public data class Ipv4(
         val address: String,
     ) : Host<Nothing>() {
         override fun toString(): String = address
     }
 
+    /**
+     * An IPv6 address.
+     */
     public data class Ipv6(
         val address: String,
     ) : Host<Nothing>() {
         override fun toString(): String = "[${formatIpv6(address)}]"
     }
 
+    /**
+     * Return a copy of self that owns a String.
+     */
     public fun toOwned(): Host<String> =
         when (this) {
             is Domain -> Domain(domain.toString())
@@ -41,6 +58,10 @@ public sealed class Host<out T> {
             is Ipv4 -> HostInternal.Ipv4(address)
             is Ipv6 -> HostInternal.Ipv6(address)
         }
+
+    public fun eq(other: Host<*>): Boolean = this == other
+
+    public fun fmt(): String = toString()
 
     override fun toString(): String =
         when (this) {
@@ -66,6 +87,9 @@ public sealed class Host<out T> {
         }
 
     public companion object {
+        /**
+         * Parse a host: either an IPv6 address in [] square brackets, or a domain.
+         */
         public fun parse(host: String): Result<Host<String>> {
             if (host.startsWith("[") && host.endsWith("]")) {
                 val inner = host.substring(1, host.length - 1)
@@ -83,6 +107,9 @@ public sealed class Host<out T> {
 
         public fun parseCow(input: String): Result<Host<String>> = parse(input)
 
+        /**
+         * Parse an opaque host.
+         */
         public fun parseOpaque(input: String): Result<Host<String>> {
             if (input.startsWith("[")) {
                 if (!input.endsWith("]")) {
@@ -108,6 +135,8 @@ public sealed class Host<out T> {
         }
 
         public fun parseOpaqueCow(input: String): Result<Host<String>> = parseOpaque(input)
+
+        public fun from(host: Host<String>): Host<String> = host
     }
 }
 
@@ -123,6 +152,10 @@ internal sealed class HostInternal {
     data class Ipv6(
         val address: String,
     ) : HostInternal()
+
+    companion object {
+        fun from(host: Host<*>): HostInternal = host.toInternal()
+    }
 
     override fun equals(other: Any?): Boolean =
         when {
@@ -227,7 +260,7 @@ internal fun isValidDomain(s: String): Boolean {
         label.isNotEmpty() ||
             (label.isEmpty() && labels.first() == label) // allow leading dot
     } &&
-        labels.withIndex().all { (i, label) ->
+        labels.all { label ->
             label.isEmpty() ||
                 (
                     label.all { it.isLetterOrDigit() || it == '-' } &&
@@ -244,7 +277,7 @@ internal fun expandIpv6(short: String): String {
     val groups = mutableListOf<String>()
     for (g in left) groups.add(g.padStart(4, '0').lowercase())
     val fillCount = 8 - left.size - right.size
-    for (i in 0 until fillCount) groups.add("0000")
+    repeat(fillCount) { groups.add("0000") }
     for (g in right) groups.add(g.padStart(4, '0').lowercase())
     return groups.joinToString(":")
 }
@@ -348,7 +381,7 @@ internal fun parseIpv6Addr(input: String): Result<String> {
     }
 
     val rightHexGroups = mutableListOf<String>()
-    var ipv4Groups = mutableListOf<String>()
+    val ipv4Groups = mutableListOf<String>()
 
     if (rightPieces.isNotEmpty()) {
         val last = rightPieces.last()
@@ -375,7 +408,7 @@ internal fun parseIpv6Addr(input: String): Result<String> {
 
     val allGroups = mutableListOf<String>()
     allGroups.addAll(leftGroups)
-    for (i in 0 until fillCount) allGroups.add("0000")
+    repeat(fillCount) { allGroups.add("0000") }
     allGroups.addAll(rightHexGroups)
     allGroups.addAll(ipv4Groups)
 

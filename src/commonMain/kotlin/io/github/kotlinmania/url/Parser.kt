@@ -6,6 +6,142 @@ package io.github.kotlinmania.url
 import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
 
+/**
+ * Errors that can occur during parsing.
+ */
+public sealed class ParseError(
+    public val details: String,
+) : Exception(details) {
+    public data object EmptyHost : ParseError("empty host")
+
+    public data object IdnaError : ParseError("invalid international domain name")
+
+    public data object InvalidPort : ParseError("invalid port number")
+
+    public data object InvalidIpv4Address : ParseError("invalid IPv4 address")
+
+    public data object InvalidIpv6Address : ParseError("invalid IPv6 address")
+
+    public data object InvalidDomainCharacter : ParseError("invalid domain character")
+
+    public data object RelativeUrlWithoutBase : ParseError("relative URL without a base")
+
+    public data object RelativeUrlWithCannotBeABaseBase :
+        ParseError("relative URL with a cannot-be-a-base base")
+
+    public data object SetHostOnCannotBeABaseUrl :
+        ParseError("a cannot-be-a-base URL doesn’t have a host to set")
+
+    public data object Overflow : ParseError("URLs more than 4 GB are not supported")
+
+    public data object CannotSetHost :
+        ParseError("a cannot-be-a-base URL doesn’t have a host to set")
+
+    public data object ParseFailed : ParseError("parse failed")
+
+    public data class NotSupported(
+        val operation: String,
+    ) : ParseError("not supported: $operation")
+
+    public data class Other(
+        override val message: String,
+    ) : ParseError(message)
+
+    public fun fmt(): String = details
+
+    public fun errorDescription(): String = details
+}
+
+public typealias UrlError = ParseError
+
+public typealias ParseResult<T> = Result<T>
+
+/**
+ * Non-fatal syntax violations that can occur during parsing.
+ */
+public enum class SyntaxViolation(
+    private val text: String,
+) {
+    Backslash("backslash"),
+    C0SpaceIgnored("leading or trailing control or space character are ignored in URLs"),
+    EmbeddedCredentials("embedding authentication information (username or password) in an URL is not recommended"),
+    ExpectedDoubleSlash("expected //"),
+    ExpectedFileDoubleSlash("expected // after file:"),
+    FileWithHostAndWindowsDrive("file: with host and Windows drive letter"),
+    NonUrlCodePoint("non-URL code point"),
+    NullInFragment("NULL characters are ignored in URL fragment identifiers"),
+    PercentDecode("expected 2 hex digits after %"),
+    TabOrNewlineIgnored("tabs or newlines are ignored in URLs"),
+    UnencodedAtSign("unencoded @ sign in username or password"),
+    PercentDecodeExpected("Percent-decoded bytes did not trigger a valid character"),
+    NonCharacter("Code point is a non-character"),
+    InvalidCodePoint("Code point is invalid in URL"),
+    ;
+
+    public fun fmt(): String = text
+
+    public fun errorDescription(): String = text
+
+    override fun toString(): String = text
+}
+
+public enum class SchemeType {
+    File,
+    SpecialNotFile,
+    NotSpecial,
+    ;
+
+    public fun isSpecial(): Boolean = this != NotSpecial
+
+    public fun isFile(): Boolean = this == File
+
+    public companion object {
+        public fun from(scheme: String): SchemeType =
+            when (scheme.lowercase()) {
+                "http", "https", "ws", "wss", "ftp" -> SpecialNotFile
+                "file" -> File
+                else -> NotSpecial
+            }
+    }
+}
+
+public fun defaultPort(scheme: String): Int? =
+    when (scheme.lowercase()) {
+        "http", "ws" -> 80
+        "https", "wss" -> 443
+        "ftp" -> 21
+        else -> null
+    }
+
+public typealias EncodingOverride = ((String) -> String)?
+
+internal interface Pattern {
+    fun splitPrefix(input: Input): Boolean
+}
+
+internal class CharPattern(
+    val char: Char,
+) : Pattern {
+    override fun splitPrefix(input: Input): Boolean = input.nextOrNull() == char
+}
+
+internal class StringPattern(
+    val str: String,
+) : Pattern {
+    override fun splitPrefix(input: Input): Boolean {
+        for (c in str) {
+            if (input.nextOrNull() != c) return false
+        }
+        return true
+    }
+}
+
+internal class PredicatePattern(
+    val predicate: (Char) -> Boolean,
+) : Pattern {
+    override fun splitPrefix(input: Input): Boolean = input.nextOrNull()?.let(predicate) ?: false
+}
+
 internal enum class Context {
     UrlParser,
     Setter,
@@ -16,6 +152,10 @@ internal class Input internal constructor(
     private val str: String,
     private var index: Int = 0,
 ) : Iterator<Char> {
+    public typealias Item = Char
+
+    public fun sizeHint(): Pair<Int, Int?> = Pair(0, str.length - index)
+
     public companion object {
         public fun newNoTrim(input: String): Input = Input(input, 0)
 
@@ -252,13 +392,13 @@ internal class Parser internal constructor(
             val hostStr =
                 if (hasIgnoredChars) {
                     val sb = StringBuilder()
-                    for (i in 0 until nonIgnoredChars) {
-                        val c = input.nextOrNull() ?: break
+                    repeat(nonIgnoredChars) {
+                        val c = input.nextOrNull() ?: return@repeat
                         sb.append(c)
                     }
                     sb.toString()
                 } else {
-                    for (i in 0 until nonIgnoredChars) {
+                    repeat(nonIgnoredChars) {
                         input.nextOrNull()
                     }
                     rawSlice.substring(0, minOf(rawSlice.length, nonIgnoredChars))
@@ -323,13 +463,13 @@ internal class Parser internal constructor(
             val hostStr =
                 if (hasIgnoredChars) {
                     val sb = StringBuilder()
-                    for (i in 0 until nonIgnoredChars) {
-                        val c = remaining.nextOrNull() ?: break
+                    repeat(nonIgnoredChars) {
+                        val c = remaining.nextOrNull() ?: return@repeat
                         sb.append(c)
                     }
                     sb.toString()
                 } else {
-                    for (i in 0 until nonIgnoredChars) {
+                    repeat(nonIgnoredChars) {
                         remaining.nextOrNull()
                     }
                     rawSlice.substring(0, minOf(rawSlice.length, nonIgnoredChars))
@@ -388,7 +528,7 @@ internal class Parser internal constructor(
     }
 
     public fun parseScheme(input: Input): ParseResult<Triple<SchemeType, Int, Input>> {
-        var remaining = input.clone()
+        val remaining = input.clone()
         val (firstChar, _) = remaining.splitFirst()
         if (firstChar == null || !asciiAlpha(firstChar)) {
             return Result.failure(ParseError.RelativeUrlWithoutBase)
@@ -954,7 +1094,7 @@ internal class Parser internal constructor(
         schemeType: SchemeType,
     ): ParseResult<Pair<Int, Input>> {
         var lastAt: Pair<Int, Input>? = null
-        var remaining = input.clone()
+        val remaining = input.clone()
         var charCount = 0
         while (remaining.hasNext()) {
             val c = remaining.next()
@@ -1004,7 +1144,7 @@ internal class Parser internal constructor(
         var usernameEnd: Int? = null
         var hasPassword = false
         var hasUsername = false
-        var currentInput = input.clone()
+        val currentInput = input.clone()
         while (userinfoCharCount > 0) {
             val pair = currentInput.nextUtf8() ?: break
             val c = pair.first
@@ -1135,9 +1275,9 @@ internal class Parser internal constructor(
         pathStart: Int,
         input: Input,
     ): Input {
-        fun pushPending(text: String, context: Context, schemeType: SchemeType) {
+        fun pushPending(text: String, ctx: Context) {
             if (text.isEmpty()) return
-            if (context == Context.PathSegmentSetter) {
+            if (ctx == Context.PathSegmentSetter) {
                 if (schemeType.isSpecial()) {
                     serialization.append(PercentEncoding.utf8PercentEncode(text, PercentEncoding::shouldEncodeSpecialPathSegment))
                 } else {
@@ -1158,25 +1298,25 @@ internal class Parser internal constructor(
                 val inputBeforeC = currentInput.clone()
                 val (c, nextInput) = currentInput.splitFirst()
                 if (c == null) {
-                    pushPending(buffer.toString(), context, schemeType)
+                    pushPending(buffer.toString(), context)
                     break
                 }
                 currentInput = nextInput
                 when {
                     asciiTabOrNewLine(c) -> {
-                        pushPending(buffer.toString(), context, schemeType)
+                        pushPending(buffer.toString(), context)
                         buffer.clear()
                     }
 
                     c == '/' && context != Context.PathSegmentSetter -> {
-                        pushPending(buffer.toString(), context, schemeType)
+                        pushPending(buffer.toString(), context)
                         serialization.append(c)
                         endsWithSlash = true
                         break
                     }
 
                     c == '\\' && context != Context.PathSegmentSetter && schemeType.isSpecial() -> {
-                        pushPending(buffer.toString(), context, schemeType)
+                        pushPending(buffer.toString(), context)
                         logViolation(SyntaxViolation.Backslash)
                         serialization.append('/')
                         endsWithSlash = true
@@ -1184,7 +1324,7 @@ internal class Parser internal constructor(
                     }
 
                     (c == '?' || c == '#') && context == Context.UrlParser -> {
-                        pushPending(buffer.toString(), context, schemeType)
+                        pushPending(buffer.toString(), context)
                         currentInput = inputBeforeC
                         break
                     }
@@ -1195,7 +1335,7 @@ internal class Parser internal constructor(
                             serialization.length > pathStart &&
                             isNormalizedWindowsDriveLetter(serialization.substring(pathStart + 1))
                         ) {
-                            pushPending(buffer.toString(), context, schemeType)
+                            pushPending(buffer.toString(), context)
                             buffer.clear()
                             serialization.append('/')
                             segmentStart += 1
@@ -1289,7 +1429,7 @@ internal class Parser internal constructor(
     }
 
     public fun parseCannotBeABasePath(input: Input): Input {
-        var current = input
+        val current = input
         while (true) {
             val inputBeforeC = current.clone()
             val pair = current.nextUtf8() ?: return current
@@ -1382,6 +1522,53 @@ internal class Parser internal constructor(
         return Result.success(Pair(queryStart, fragmentStart))
     }
 
+    internal class QueryPartIter(
+        val isUrlParser: Boolean,
+        val input: Input,
+        val violationFn: ((SyntaxViolation) -> Unit)?,
+    ) : Iterator<Pair<String, Boolean>> {
+        public typealias Item = Pair<String, Boolean>
+
+        private var nextItem: Pair<String, Boolean>? = null
+        private var isFinished = false
+
+        override fun hasNext(): Boolean {
+            if (nextItem != null) return true
+            if (isFinished) return false
+            advance()
+            return nextItem != null
+        }
+
+        override fun next(): Pair<String, Boolean> {
+            if (!hasNext()) throw NoSuchElementException()
+            val item = nextItem!!
+            nextItem = null
+            return item
+        }
+
+        private fun advance() {
+            val buffer = StringBuilder()
+            while (input.hasNext()) {
+                val c = input.next()
+                if (asciiTabOrNewLine(c)) {
+                    nextItem = Pair(buffer.toString(), false)
+                    return
+                } else if (c == '#' && isUrlParser) {
+                    nextItem = Pair(buffer.toString(), true)
+                    isFinished = true
+                    return
+                } else {
+                    violationFn?.let { vfn -> checkUrlCodePoint(vfn, c, input) }
+                    buffer.append(c)
+                }
+            }
+            if (buffer.isNotEmpty()) {
+                nextItem = Pair(buffer.toString(), false)
+            }
+            isFinished = true
+        }
+    }
+
     public fun parseQuery(
         schemeType: SchemeType,
         schemeEnd: Int,
@@ -1402,48 +1589,21 @@ internal class Parser internal constructor(
                 false
             }
 
-        var current = input
-        val buffer = StringBuilder()
-        while (current.hasNext()) {
-            val c = current.next()
-            if (asciiTabOrNewLine(c)) {
-                if (buffer.isNotEmpty()) {
-                    val encoded =
-                        if (queryEncodingOverrideValid && queryEncodingOverride != null) {
-                            PercentEncoding.utf8PercentEncode(queryEncodingOverride(buffer.toString()), queryPredicate)
-                        } else {
-                            PercentEncoding.utf8PercentEncode(buffer.toString(), queryPredicate)
-                        }
-                    serialization.append(encoded)
-                    buffer.clear()
-                }
-            } else if (c == '#' && context == Context.UrlParser) {
-                if (buffer.isNotEmpty()) {
-                    val encoded =
-                        if (queryEncodingOverrideValid && queryEncodingOverride != null) {
-                            PercentEncoding.utf8PercentEncode(queryEncodingOverride(buffer.toString()), queryPredicate)
-                        } else {
-                            PercentEncoding.utf8PercentEncode(buffer.toString(), queryPredicate)
-                        }
-                    serialization.append(encoded)
-                    buffer.clear()
-                }
-                return current
-            } else {
-                if (violationFn != null) {
-                    checkUrlCodePoint(violationFn, c, current)
-                }
-                buffer.append(c)
+        val partIter = QueryPartIter(context == Context.UrlParser, input, violationFn)
+        while (partIter.hasNext()) {
+            val (part, isFinished) = partIter.next()
+            if (part.isNotEmpty()) {
+                val encoded =
+                    if (queryEncodingOverrideValid && queryEncodingOverride != null) {
+                        PercentEncoding.utf8PercentEncode(queryEncodingOverride(part), queryPredicate)
+                    } else {
+                        PercentEncoding.utf8PercentEncode(part, queryPredicate)
+                    }
+                serialization.append(encoded)
             }
-        }
-        if (buffer.isNotEmpty()) {
-            val encoded =
-                if (queryEncodingOverrideValid && queryEncodingOverride != null) {
-                    PercentEncoding.utf8PercentEncode(queryEncodingOverride(buffer.toString()), queryPredicate)
-                } else {
-                    PercentEncoding.utf8PercentEncode(buffer.toString(), queryPredicate)
-                }
-            serialization.append(encoded)
+            if (isFinished) {
+                return partIter.input
+            }
         }
         return null
     }
@@ -1479,29 +1639,57 @@ internal class Parser internal constructor(
         )
     }
 
-    public fun parseFragment(input: Input) {
-        val buffer = StringBuilder()
-        var current = input
-        while (current.hasNext()) {
-            val c = current.next()
-            if (asciiTabOrNewLine(c)) {
-                if (buffer.isNotEmpty()) {
-                    serialization.append(PercentEncoding.utf8PercentEncode(buffer.toString(), PercentEncoding::shouldEncodeFragment))
-                    buffer.clear()
-                }
-            } else if (c == '\u0000') {
-                if (violationFn != null) {
-                    violationFn(SyntaxViolation.NullInFragment)
-                }
-            } else {
-                if (violationFn != null) {
-                    checkUrlCodePoint(violationFn, c, current)
-                }
-                buffer.append(c)
-            }
+    internal class FragmentPartIter(
+        val input: Input,
+        val violationFn: ((SyntaxViolation) -> Unit)?,
+    ) : Iterator<String> {
+        public typealias Item = String
+
+        private var nextItem: String? = null
+        private var isFinished = false
+
+        override fun hasNext(): Boolean {
+            if (nextItem != null) return true
+            if (isFinished) return false
+            advance()
+            return nextItem != null
         }
-        if (buffer.isNotEmpty()) {
-            serialization.append(PercentEncoding.utf8PercentEncode(buffer.toString(), PercentEncoding::shouldEncodeFragment))
+
+        override fun next(): String {
+            if (!hasNext()) throw NoSuchElementException()
+            val item = nextItem!!
+            nextItem = null
+            return item
+        }
+
+        private fun advance() {
+            val buffer = StringBuilder()
+            while (input.hasNext()) {
+                val c = input.next()
+                if (asciiTabOrNewLine(c)) {
+                    nextItem = buffer.toString()
+                    return
+                } else if (c == '\u0000') {
+                    violationFn?.invoke(SyntaxViolation.NullInFragment)
+                } else {
+                    violationFn?.let { vfn -> checkUrlCodePoint(vfn, c, input) }
+                    buffer.append(c)
+                }
+            }
+            if (buffer.isNotEmpty()) {
+                nextItem = buffer.toString()
+            }
+            isFinished = true
+        }
+    }
+
+    public fun parseFragment(input: Input) {
+        val partIter = FragmentPartIter(input, violationFn)
+        while (partIter.hasNext()) {
+            val part = partIter.next()
+            if (part.isNotEmpty()) {
+                serialization.append(PercentEncoding.utf8PercentEncode(part, PercentEncoding::shouldEncodeFragment))
+            }
         }
     }
 

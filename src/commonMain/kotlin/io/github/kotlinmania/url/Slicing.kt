@@ -6,6 +6,21 @@ package io.github.kotlinmania.url
 import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
 
+/**
+ * Associated slice output type for indexing.
+ */
+public typealias Output = String
+
+/**
+ * Indicates a position within a URL based on its components.
+ *
+ * A range of positions can be used for slicing URL:
+ *
+ * In component ordering:
+ * - BeforeScheme and AfterFragment are always the start and end of the entire URL.
+ * - When a given component is not present, its "before" and "after" position
+ *   are the same and component ordering is preserved.
+ */
 @HiddenFromObjC
 public enum class Position {
     BeforeScheme,

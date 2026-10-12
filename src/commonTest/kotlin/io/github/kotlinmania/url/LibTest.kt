@@ -94,6 +94,21 @@ class LibTest {
     }
 
     @Test
+    fun parseWithParams() {
+        val url =
+            Url
+                .parseWithParams(
+                    "http://testing.com/this?dont=clobberme",
+                    listOf(Pair("lang", "rust")),
+                ).getOrThrow()
+
+        assertEquals(
+            "http://testing.com/this?dont=clobberme&lang=rust",
+            url.asStr(),
+        )
+    }
+
+    @Test
     fun issue124() {
         val url = Url.parse("file:a").getOrThrow()
         assertEquals("/a", url.path())
@@ -201,6 +216,19 @@ class LibTest {
         url.setScheme("https").getOrThrow()
         assertNull(url.port())
         assertEquals(443, url.portOrKnownDefault())
+    }
+
+    @Test
+    fun issue197() {
+        val url = Url.fromFilePath("/").getOrThrow()
+        assertEquals(
+            Url.parse("file:///").getOrThrow(),
+            url,
+        )
+        url
+            .pathSegmentsMut()
+            .getOrThrow()
+            .popIfEmpty()
     }
 
     @Test

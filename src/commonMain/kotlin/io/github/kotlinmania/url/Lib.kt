@@ -472,12 +472,9 @@ public class Url
 
         public fun queryPairsMut(): UrlQuery {
             val savedFragment = takeFragment()
-            val qs: Int
-            if (queryStart != null) {
-                qs = queryStart!!
-            } else {
-                qs = serialization.length
-                queryStart = qs
+            val currentQueryStart = queryStart
+            if (currentQueryStart == null) {
+                queryStart = serialization.length
                 serialization += '?'
             }
             return UrlQuery(this, savedFragment)
@@ -572,7 +569,7 @@ public class Url
             if (!hasHost() || host() == Host.Domain("") || scheme() == "file") {
                 return Result.failure(ParseError.NotSupported("setPassword"))
             }
-            val pwd = password ?: ""
+            val pwd = password.orEmpty()
             if (pwd.isNotEmpty()) {
                 val hostAndAfter = serialization.substring(hostStart)
                 serialization = serialization.substring(0, usernameEnd) + ":$pwd@$hostAndAfter"
