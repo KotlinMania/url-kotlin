@@ -52,8 +52,6 @@ public sealed class ParseError(
     public fun errorDescription(): String = details
 }
 
-public typealias UrlError = ParseError
-
 public typealias ParseResult<T> = Result<T>
 
 /**
