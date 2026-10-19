@@ -1,4 +1,3 @@
-// port-lint: source form_urlencoded
 package io.github.kotlinmania.url
 
 internal fun parseFormUrlencoded(query: String): List<Pair<String, String>> {

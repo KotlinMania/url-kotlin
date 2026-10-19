@@ -1,4 +1,3 @@
-// port-lint: tests lib.rs
 package io.github.kotlinmania.url
 
 import kotlin.test.Test
@@ -8,7 +7,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class LibTest {
+class UrlTest {
     @Test
     fun testRelative() {
         val base = Url.parse("sc://%C3%B1").getOrThrow()
@@ -813,13 +812,34 @@ class LibTest {
 
     @Test
     fun issue974() {
-        val u = Url.parse("http://example.com").getOrThrow()
-        assertEquals("http", u.scheme())
+        val u = Url.parse("http://example.com:8000").getOrThrow()
+        val ignored = setPort(u, "\u00009000")
+        assertEquals(8000, u.port())
     }
 
     @Test
     fun serdeErrorMessage() {
-        val u = Url.parse("http://example.com").getOrThrow()
-        assertEquals("http://example.com/", u.asStr())
+        val res =
+            io.github.kotlinmania.serdejson
+                .fromStr("\"§invalid#+#*Ä\"", Url)
+        assertTrue(res.isFailure)
+        val err = res.exceptionOrNull()
+        assertTrue(err != null)
+        assertTrue(err.message.contains("relative URL without a base: \"§invalid#+#*Ä\""))
+    }
+
+    @Test
+    fun serdeRoundtrip() {
+        val u = Url.parse("https://example.com/path?foo=bar#frag").getOrThrow()
+        val json =
+            io.github.kotlinmania.serdejson
+                .toStr(u)
+                .getOrThrow()
+        assertEquals("\"https://example.com/path?foo=bar#frag\"", json)
+        val deserialized =
+            io.github.kotlinmania.serdejson
+                .fromStr(json, Url)
+                .getOrThrow()
+        assertEquals(u, deserialized)
     }
 }
