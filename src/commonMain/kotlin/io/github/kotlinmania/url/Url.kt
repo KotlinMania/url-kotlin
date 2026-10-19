@@ -1,8 +1,14 @@
-// port-lint: source lib.rs
 @file:OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
 
 package io.github.kotlinmania.url
 
+import io.github.kotlinmania.serde.SerdeError
+import io.github.kotlinmania.serde.SerdeResult
+import io.github.kotlinmania.serdecore.de.Deserialize
+import io.github.kotlinmania.serdecore.de.Deserializer
+import io.github.kotlinmania.serdecore.de.Visitor
+import io.github.kotlinmania.serdecore.ser.Serialize
+import io.github.kotlinmania.serdecore.ser.Serializer
 import kotlin.experimental.ExperimentalObjCRefinement
 import kotlin.native.HiddenFromObjC
 
@@ -46,8 +52,14 @@ public class Url
         @PublishedApi internal var pathStart: Int,
         @PublishedApi internal var queryStart: Int?,
         @PublishedApi internal var fragmentStart: Int?,
-    ) {
-        public companion object {
+    ) : Serialize {
+        override fun <Ok> serialize(serializer: Serializer<Ok>): SerdeResult<Ok> =
+            serializer.serializeStr(asStr())
+
+        public companion object : Deserialize<Url> {
+            override fun <D : Deserializer> deserialize(deserializer: D): SerdeResult<Url> =
+                deserializer.deserializeStr(UrlVisitor)
+
             public fun parse(input: String): Result<Url> = options().parse(input)
 
             public fun parseWithParams(
@@ -955,4 +967,19 @@ internal fun fileUrlToPath(url: Url): Result<String> {
     }
 
     return Result.success("/" + decodedSegments.joinToString("/"))
+}
+
+internal object UrlVisitor : Visitor<Url> {
+    override fun expecting(): String = "a string representing an URL"
+
+    override fun visitStr(v: String): SerdeResult<Url> {
+        val result = Url.parse(v)
+        return if (result.isSuccess) {
+            SerdeResult.success(result.getOrThrow())
+        } else {
+            val err = result.exceptionOrNull()
+            val desc = if (err is ParseError) err.details else (err?.message ?: "parse failed")
+            SerdeResult.failure(SerdeError.custom("$desc: \"$v\""))
+        }
+    }
 }
